@@ -1,0 +1,84 @@
+/**
+ * Admin styles for RideOn Translator
+ */
+
+#rideon-translator-metabox {
+	margin-top: 10px;
+}
+
+.rideon-translator-existing {
+	margin-bottom: 15px;
+	padding-bottom: 15px;
+	border-bottom: 1px solid #ddd;
+}
+
+.rideon-translator-existing h4 {
+	margin-top: 0;
+	margin-bottom: 10px;
+	font-size: 13px;
+}
+
+.rideon-translator-translations-list {
+	margin: 0;
+	padding-left: 20px;
+}
+
+.rideon-translator-translations-list li {
+	margin-bottom: 5px;
+}
+
+.rideon-translator-controls {
+	margin-top: 15px;
+}
+
+.rideon-translator-controls label {
+	display: block;
+	margin-bottom: 8px;
+	font-weight: 600;
+}
+
+.rideon-translator-controls select {
+	margin-bottom: 10px;
+}
+
+#rideon-translator-translate-btn {
+	width: 100%;
+	margin-top: 10px;
+	position: relative;
+}
+
+#rideon-translator-translate-btn:disabled {
+	opacity: 0.6;
+	cursor: not-allowed;
+}
+
+.rideon-translator-spinner {
+	display: inline-block;
+}
+
+.rideon-translator-spinner.is-active {
+	visibility: visible !important;
+}
+
+.rideon-translator-message {
+	margin-top: 15px;
+	padding: 10px;
+	border-radius: 4px;
+}
+
+.rideon-translator-message.success {
+	background-color: #d4edda;
+	border: 1px solid #c3e6cb;
+	color: #155724;
+}
+
+.rideon-translator-message.error {
+	background-color: #f8d7da;
+	border: 1px solid #f5c6cb;
+	color: #721c24;
+}
+
+.rideon-translator-message a {
+	color: inherit;
+	text-decoration: underline;
+}

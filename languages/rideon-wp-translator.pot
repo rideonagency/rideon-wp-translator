@@ -1,0 +1,158 @@
+# Copyright (C) 2025 RideOn
+# This file is distributed under the same license as the RideOn WP Translator plugin.
+msgid ""
+msgstr ""
+"Project-Id-Version: RideOn WP Translator 1.0.0\n"
+"Report-Msgid-Bugs-To: https://github.com/rideon-wp-translator\n"
+"POT-Creation-Date: 2025-02-11 12:00+0000\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"Language: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+msgid "Translate"
+msgstr ""
+
+msgid "Translating..."
+msgstr ""
+
+msgid "Translation completed successfully!"
+msgstr ""
+
+msgid "An error occurred during translation."
+msgstr ""
+
+msgid "OpenAI API key is not configured."
+msgstr ""
+
+msgid "Text to translate is empty."
+msgstr ""
+
+msgid "Unknown API error."
+msgstr ""
+
+msgid "Invalid response from OpenAI API."
+msgstr ""
+
+msgid "API key is not set."
+msgstr ""
+
+msgid "Source post not found."
+msgstr ""
+
+msgid "Translation already exists for this language."
+msgstr ""
+
+msgid "Translation returned empty result."
+msgstr ""
+
+msgid "Please configure your OpenAI API key in"
+msgstr ""
+
+msgid "Settings"
+msgstr ""
+
+msgid "RideOn Translator Settings"
+msgstr ""
+
+msgid "RideOn Translator"
+msgstr ""
+
+msgid "Save Settings"
+msgstr ""
+
+msgid "Configure your OpenAI API credentials. You can get your API key from https://platform.openai.com/api-keys"
+msgstr ""
+
+msgid "API Key"
+msgstr ""
+
+msgid "Your OpenAI API key. Keep this secure and never share it publicly."
+msgstr ""
+
+msgid "Model"
+msgstr ""
+
+msgid "Choose the OpenAI model to use for translations."
+msgstr ""
+
+msgid "Set default source and target languages for translations."
+msgstr ""
+
+msgid "Default Source Language"
+msgstr ""
+
+msgid "Default Target Language"
+msgstr ""
+
+msgid "Italian"
+msgstr ""
+
+msgid "English"
+msgstr ""
+
+msgid "Spanish"
+msgstr ""
+
+msgid "French"
+msgstr ""
+
+msgid "German"
+msgstr ""
+
+msgid "Portuguese"
+msgstr ""
+
+msgid "Russian"
+msgstr ""
+
+msgid "Chinese"
+msgstr ""
+
+msgid "Japanese"
+msgstr ""
+
+msgid "Korean"
+msgstr ""
+
+msgid "Arabic"
+msgstr ""
+
+msgid "Settings saved successfully!"
+msgstr ""
+
+msgid "Existing Translations"
+msgstr ""
+
+msgid "Translate to:"
+msgstr ""
+
+msgid "Select language..."
+msgstr ""
+
+msgid "Security check failed."
+msgstr ""
+
+msgid "You do not have permission to translate posts."
+msgstr ""
+
+msgid "Invalid parameters."
+msgstr ""
+
+msgid "Post not found."
+msgstr ""
+
+msgid "You do not have permission to edit this post."
+msgstr ""
+
+msgid "Invalid API key. Please check your OpenAI API key in settings."
+msgstr ""
+
+msgid "Rate limit exceeded. Please try again later."
+msgstr ""
+
+msgid "OpenAI service is temporarily unavailable. Please try again later."
+msgstr ""
