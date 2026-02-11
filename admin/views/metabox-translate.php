@@ -25,48 +25,44 @@ $languages = array(
 );
 
 $default_target_lang = get_option( 'rideon_translator_default_target_lang', 'en' );
+$default_source_lang = get_option( 'rideon_translator_default_source_lang', 'it' );
 ?>
 
 <div id="rideon-translator-metabox">
-	<?php if ( ! empty( $translations ) ) : ?>
-		<div class="rideon-translator-existing">
-			<h4><?php esc_html_e( 'Existing Translations', 'rideon-wp-translator' ); ?></h4>
-			<ul class="rideon-translator-translations-list">
-				<?php foreach ( $translations as $lang_code => $translated_post_id ) : ?>
-					<?php
-					$translated_post = get_post( $translated_post_id );
-					if ( $translated_post ) :
-						?>
-						<li>
-							<strong><?php echo esc_html( $languages[ $lang_code ] ?? $lang_code ); ?>:</strong>
-							<a href="<?php echo esc_url( get_edit_post_link( $translated_post_id ) ); ?>" target="_blank">
-								<?php echo esc_html( $translated_post->post_title ); ?>
-							</a>
-						</li>
-					<?php endif; ?>
-				<?php endforeach; ?>
-			</ul>
-		</div>
-	<?php endif; ?>
-
 	<div class="rideon-translator-controls">
-		<label for="rideon-translator-target-lang">
+		<label for="rideon-translator-source-lang">
+			<strong><?php esc_html_e( 'Source Language:', 'rideon-wp-translator' ); ?></strong>
+		</label>
+		<select id="rideon-translator-source-lang" class="widefat">
+			<?php foreach ( $languages as $code => $name ) : ?>
+				<option value="<?php echo esc_attr( $code ); ?>" <?php selected( $default_source_lang, $code ); ?>>
+					<?php echo esc_html( $name ); ?>
+				</option>
+			<?php endforeach; ?>
+		</select>
+		<p class="description" style="margin-top: 5px;">
+			<?php esc_html_e( 'Default can be changed in', 'rideon-wp-translator' ); ?> 
+			<a href="<?php echo esc_url( admin_url( 'options-general.php?page=rideon-translator' ) ); ?>">
+				<?php esc_html_e( 'Settings', 'rideon-wp-translator' ); ?>
+			</a>
+		</p>
+
+		<label for="rideon-translator-target-lang" style="margin-top: 15px; display: block;">
 			<strong><?php esc_html_e( 'Translate to:', 'rideon-wp-translator' ); ?></strong>
 		</label>
 		<select id="rideon-translator-target-lang" class="widefat">
 			<option value=""><?php esc_html_e( 'Select language...', 'rideon-wp-translator' ); ?></option>
 			<?php foreach ( $languages as $code => $name ) : ?>
-				<?php if ( ! isset( $translations[ $code ] ) ) : ?>
-					<option value="<?php echo esc_attr( $code ); ?>" <?php selected( $default_target_lang, $code ); ?>>
-						<?php echo esc_html( $name ); ?>
-					</option>
-				<?php endif; ?>
+				<option value="<?php echo esc_attr( $code ); ?>" <?php selected( 'en', $code ); ?>>
+					<?php echo esc_html( $name ); ?>
+				</option>
 			<?php endforeach; ?>
 		</select>
 
 		<button type="button" 
 		        id="rideon-translator-translate-btn" 
 		        class="button button-primary button-large" 
+		        style="margin-top: 15px; width: 100%;"
 		        data-post-id="<?php echo esc_attr( $source_post_id ); ?>">
 			<span class="rideon-translator-btn-text"><?php esc_html_e( 'Translate', 'rideon-wp-translator' ); ?></span>
 			<span class="rideon-translator-spinner spinner" style="float: none; margin: 0 0 0 8px; visibility: hidden;"></span>

@@ -54,9 +54,41 @@ class RideOn_Translator_OpenAI_Client {
 		if ( ! $encrypted_key ) {
 			return '';
 		}
+		
 		// Simple encryption/decryption using WordPress functions
 		// In production, consider using more secure methods
-		return base64_decode( $encrypted_key );
+		$decoded = base64_decode( $encrypted_key, true );
+		
+		// If decoding fails, the key might not be encoded or might be double-encoded
+		// Try decoding multiple times if needed (handles double-encoding cases)
+		if ( $decoded === false || strpos( $decoded, 'sk-' ) !== 0 ) {
+			$current_key = $encrypted_key;
+			$attempts = 0;
+			while ( $attempts < 3 ) {
+				$test_decode = base64_decode( $current_key, true );
+				if ( $test_decode === false || $test_decode === $current_key ) {
+					break;
+				}
+				if ( strpos( $test_decode, 'sk-' ) === 0 ) {
+					return $test_decode;
+				}
+				$current_key = $test_decode;
+				$attempts++;
+			}
+		}
+		
+		// If decoded key is valid, return it
+		if ( $decoded !== false && strpos( $decoded, 'sk-' ) === 0 ) {
+			return $decoded;
+		}
+		
+		// If stored key is already a plain API key (shouldn't happen, but handle it)
+		if ( strpos( $encrypted_key, 'sk-' ) === 0 ) {
+			return $encrypted_key;
+		}
+		
+		// Return decoded value or empty string
+		return $decoded !== false ? $decoded : '';
 	}
 
 	/**
@@ -68,11 +100,19 @@ class RideOn_Translator_OpenAI_Client {
 	 * @return array|WP_Error Response array with translated text or WP_Error on failure
 	 */
 	public function translate( $text, $source_lang, $target_lang ) {
+		$this->log_debug( 'Translation request started', array(
+			'source_lang' => $source_lang,
+			'target_lang' => $target_lang,
+			'text_length' => strlen( $text ),
+		) );
+
 		if ( empty( $this->api_key ) ) {
+			$this->log_debug( 'Translation failed: API key not configured' );
 			return new WP_Error( 'no_api_key', __( 'OpenAI API key is not configured.', 'rideon-wp-translator' ) );
 		}
 
 		if ( empty( $text ) ) {
+			$this->log_debug( 'Translation failed: Empty text provided' );
 			return new WP_Error( 'empty_text', __( 'Text to translate is empty.', 'rideon-wp-translator' ) );
 		}
 
@@ -81,10 +121,27 @@ class RideOn_Translator_OpenAI_Client {
 		$response = $this->make_api_request( $prompt );
 
 		if ( is_wp_error( $response ) ) {
+			$this->log_debug( 'Translation failed', array(
+				'error_code' => $response->get_error_code(),
+				'error_message' => $response->get_error_message(),
+			) );
 			return $response;
 		}
 
-		return $this->parse_response( $response );
+		$result = $this->parse_response( $response );
+		
+		if ( is_wp_error( $result ) ) {
+			$this->log_debug( 'Translation parsing failed', array(
+				'error_code' => $result->get_error_code(),
+				'error_message' => $result->get_error_message(),
+			) );
+		} else {
+			$this->log_debug( 'Translation completed successfully', array(
+				'translated_length' => isset( $result['translated_text'] ) ? strlen( $result['translated_text'] ) : 0,
+			) );
+		}
+
+		return $result;
 	}
 
 	/**
@@ -132,6 +189,36 @@ class RideOn_Translator_OpenAI_Client {
 	}
 
 	/**
+	 * Log debug message to debug.log if enabled
+	 *
+	 * @param string $message Log message
+	 * @param array  $context Additional context data
+	 */
+	private function log_debug( $message, $context = array() ) {
+		if ( ! $this->is_debug_log_enabled() ) {
+			return;
+		}
+
+		$log_message = '[RideOn Translator] ' . $message;
+		
+		if ( ! empty( $context ) ) {
+			$log_message .= ' | Context: ' . wp_json_encode( $context );
+		}
+
+		error_log( $log_message );
+	}
+
+	/**
+	 * Check if debug logging is enabled
+	 *
+	 * @return bool
+	 */
+	private function is_debug_log_enabled() {
+		$enabled = get_option( 'rideon_translator_enable_debug_log', false );
+		return $enabled === '1' || $enabled === true || $enabled === 1;
+	}
+
+	/**
 	 * Make API request to OpenAI
 	 *
 	 * @param string $prompt Translation prompt
@@ -141,6 +228,18 @@ class RideOn_Translator_OpenAI_Client {
 		// Sanitize prompt
 		$prompt = sanitize_text_field( $prompt );
 		
+		$request_body = array(
+			'model'       => sanitize_text_field( $this->model ),
+			'messages'    => array(
+				array(
+					'role'    => 'user',
+					'content' => $prompt,
+				),
+			),
+			'temperature' => 0.3,
+			'max_tokens'  => 4000,
+		);
+
 		$args = array(
 			'method'  => 'POST',
 			'timeout' => 60,
@@ -148,33 +247,46 @@ class RideOn_Translator_OpenAI_Client {
 				'Content-Type'  => 'application/json',
 				'Authorization' => 'Bearer ' . sanitize_text_field( $this->api_key ),
 			),
-			'body'    => wp_json_encode(
-				array(
-					'model'       => sanitize_text_field( $this->model ),
-					'messages'    => array(
-						array(
-							'role'    => 'user',
-							'content' => $prompt,
-						),
-					),
-					'temperature' => 0.3,
-					'max_tokens'  => 4000,
-				)
-			),
+			'body'    => wp_json_encode( $request_body ),
 		);
+
+		// Log request details if debug is enabled
+		$this->log_debug( 'Making API request', array(
+			'endpoint' => $this->api_endpoint,
+			'model'    => $this->model,
+			'prompt_length' => strlen( $prompt ),
+			'api_key_prefix' => substr( $this->api_key, 0, 7 ) . '...',
+		) );
 
 		$response = wp_remote_request( esc_url_raw( $this->api_endpoint ), $args );
 
 		if ( is_wp_error( $response ) ) {
+			$this->log_debug( 'API request failed with WP_Error', array(
+				'error_code' => $response->get_error_code(),
+				'error_message' => $response->get_error_message(),
+			) );
 			return $response;
 		}
 
 		$status_code = wp_remote_retrieve_response_code( $response );
 		$body        = wp_remote_retrieve_body( $response );
 
+		// Log response details if debug is enabled
+		$this->log_debug( 'API response received', array(
+			'status_code' => $status_code,
+			'response_length' => strlen( $body ),
+		) );
+
 		if ( $status_code !== 200 ) {
 			$error_data = json_decode( $body, true );
 			$error_msg  = isset( $error_data['error']['message'] ) ? $error_data['error']['message'] : __( 'Unknown API error.', 'rideon-wp-translator' );
+			
+			// Log error details
+			$this->log_debug( 'API error response', array(
+				'status_code' => $status_code,
+				'error_data' => $error_data,
+				'response_body' => $body,
+			) );
 			
 			// Handle specific error codes
 			if ( $status_code === 401 ) {
@@ -188,7 +300,14 @@ class RideOn_Translator_OpenAI_Client {
 			return new WP_Error( 'api_error', $error_msg, array( 'status' => $status_code ) );
 		}
 
-		return json_decode( $body, true );
+		$decoded_response = json_decode( $body, true );
+		
+		// Log successful response details if debug is enabled
+		$this->log_debug( 'API request successful', array(
+			'usage' => isset( $decoded_response['usage'] ) ? $decoded_response['usage'] : null,
+		) );
+
+		return $decoded_response;
 	}
 
 	/**

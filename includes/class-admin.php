@@ -64,6 +64,7 @@ class RideOn_Translator_Admin {
 		register_setting( 'rideon_translator_settings', 'rideon_translator_model' );
 		register_setting( 'rideon_translator_settings', 'rideon_translator_default_source_lang' );
 		register_setting( 'rideon_translator_settings', 'rideon_translator_default_target_lang' );
+		register_setting( 'rideon_translator_settings', 'rideon_translator_enable_debug_log', array( $this, 'sanitize_checkbox' ) );
 
 		add_settings_section(
 			'rideon_translator_api_section',
@@ -111,6 +112,21 @@ class RideOn_Translator_Admin {
 			'rideon-translator',
 			'rideon_translator_lang_section'
 		);
+
+		add_settings_section(
+			'rideon_translator_debug_section',
+			__( 'Debug Settings', 'rideon-wp-translator' ),
+			array( $this, 'render_debug_section_description' ),
+			'rideon-translator'
+		);
+
+		add_settings_field(
+			'rideon_translator_enable_debug_log',
+			__( 'Enable Debug Logging', 'rideon-wp-translator' ),
+			array( $this, 'render_debug_log_field' ),
+			'rideon-translator',
+			'rideon_translator_debug_section'
+		);
 	}
 
 	/**
@@ -124,8 +140,43 @@ class RideOn_Translator_Admin {
 			return '';
 		}
 
-		// Encrypt API key before storing
-		return base64_encode( sanitize_text_field( $api_key ) );
+		$api_key = sanitize_text_field( $api_key );
+		
+		// Check if input is already a valid OpenAI API key (starts with "sk-")
+		// This means it's a plain key that needs to be encoded
+		if ( strpos( $api_key, 'sk-' ) === 0 ) {
+			// Plain API key, encode it before storing
+			return base64_encode( $api_key );
+		}
+		
+		// Check if input is already base64 encoded
+		// Try to decode and check if result is a valid API key
+		$decoded = base64_decode( $api_key, true );
+		if ( $decoded !== false && strpos( $decoded, 'sk-' ) === 0 ) {
+			// Input is already base64 encoded, return as is
+			return $api_key;
+		}
+		
+		// If input doesn't match either pattern, check if it matches stored value
+		// This handles edge cases where the field wasn't changed
+		$stored_key = get_option( 'rideon_translator_api_key' );
+		if ( ! empty( $stored_key ) && $stored_key === $api_key ) {
+			// User didn't change the field, keep the stored encoded value
+			return $api_key;
+		}
+
+		// Default: encode the input (shouldn't reach here in normal flow)
+		return base64_encode( $api_key );
+	}
+
+	/**
+	 * Sanitize checkbox value
+	 *
+	 * @param mixed $value Checkbox value
+	 * @return string '1' if checked, '0' if not
+	 */
+	public function sanitize_checkbox( $value ) {
+		return isset( $value ) && $value ? '1' : '0';
 	}
 
 	/**
@@ -236,6 +287,33 @@ class RideOn_Translator_Admin {
 				</option>
 			<?php endforeach; ?>
 		</select>
+		<?php
+	}
+
+	/**
+	 * Render debug section description
+	 */
+	public function render_debug_section_description() {
+		echo '<p>' . esc_html__( 'Enable debug logging to troubleshoot API issues. Logs will be written to WordPress debug.log file.', 'rideon-wp-translator' ) . '</p>';
+	}
+
+	/**
+	 * Render debug log field
+	 */
+	public function render_debug_log_field() {
+		$enable_log = get_option( 'rideon_translator_enable_debug_log', false );
+		?>
+		<label>
+			<input type="checkbox" 
+			       id="rideon_translator_enable_debug_log" 
+			       name="rideon_translator_enable_debug_log" 
+			       value="1" 
+			       <?php checked( $enable_log, true ); ?> />
+			<?php esc_html_e( 'Enable debug logging to debug.log', 'rideon-wp-translator' ); ?>
+		</label>
+		<p class="description">
+			<?php esc_html_e( 'When enabled, detailed API requests and responses will be logged to wp-content/debug.log. Make sure WP_DEBUG_LOG is enabled in wp-config.php.', 'rideon-wp-translator' ); ?>
+		</p>
 		<?php
 	}
 
