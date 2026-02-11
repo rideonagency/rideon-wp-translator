@@ -271,3 +271,18 @@ msgstr "Massima precisione, gestione eccellente del tono, coerenza su testi comp
 
 msgid "More expensive"
 msgstr "Più costoso"
+
+msgid "Temperature"
+msgstr "Temperatura"
+
+msgid "Controls the randomness of the translation. Lower values (0.0-0.3) make the output more deterministic and focused. Higher values (0.7-2.0) make it more creative and varied. Default: 0.3"
+msgstr "Controlla la casualità della traduzione. Valori più bassi (0.0-0.3) rendono l'output più deterministico e focalizzato. Valori più alti (0.7-2.0) lo rendono più creativo e vario. Predefinito: 0.3"
+
+msgid "Recommended for most use cases"
+msgstr "Consigliato per la maggior parte dei casi d'uso"
+
+msgid "Balanced quality/price"
+msgstr "Qualità/prezzo bilanciato"
+
+msgid "Best quality"
+msgstr "Migliore qualità"

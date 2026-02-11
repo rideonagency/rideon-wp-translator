@@ -62,6 +62,7 @@ class RideOn_Translator_Admin {
 	public function register_settings() {
 		register_setting( 'rideon_translator_settings', 'rideon_translator_api_key', array( $this, 'sanitize_api_key' ) );
 		register_setting( 'rideon_translator_settings', 'rideon_translator_model' );
+		register_setting( 'rideon_translator_settings', 'rideon_translator_temperature', array( $this, 'sanitize_temperature' ) );
 		register_setting( 'rideon_translator_settings', 'rideon_translator_default_source_lang' );
 		register_setting( 'rideon_translator_settings', 'rideon_translator_default_target_lang' );
 		register_setting( 'rideon_translator_settings', 'rideon_translator_enable_debug_log', array( $this, 'sanitize_checkbox' ) );
@@ -85,6 +86,14 @@ class RideOn_Translator_Admin {
 			'rideon_translator_model',
 			__( 'Model', 'rideon-wp-translator' ),
 			array( $this, 'render_model_field' ),
+			'rideon-translator',
+			'rideon_translator_api_section'
+		);
+
+		add_settings_field(
+			'rideon_translator_temperature',
+			__( 'Temperature', 'rideon-wp-translator' ),
+			array( $this, 'render_temperature_field' ),
 			'rideon-translator',
 			'rideon_translator_api_section'
 		);
@@ -177,6 +186,25 @@ class RideOn_Translator_Admin {
 	 */
 	public function sanitize_checkbox( $value ) {
 		return isset( $value ) && $value ? '1' : '0';
+	}
+
+	/**
+	 * Sanitize temperature value
+	 *
+	 * @param mixed $value Temperature value
+	 * @return float Sanitized temperature value between 0 and 2
+	 */
+	public function sanitize_temperature( $value ) {
+		$temperature = floatval( $value );
+		
+		// Ensure temperature is between 0 and 2
+		if ( $temperature < 0 ) {
+			$temperature = 0;
+		} elseif ( $temperature > 2 ) {
+			$temperature = 2;
+		}
+		
+		return $temperature;
 	}
 
 	/**
@@ -284,7 +312,7 @@ class RideOn_Translator_Admin {
 	private function get_models_info() {
 		return array(
 			'gpt-3.5-turbo' => array(
-				'label'    => 'GPT-3.5 Turbo (Recommended for most use cases)',
+				'label'    => sprintf( 'GPT-3.5 Turbo (%s)', __( 'Recommended for most use cases', 'rideon-wp-translator' ) ),
 				'cost'     => __( 'Low', 'rideon-wp-translator' ),
 				'quality'  => __( 'Good', 'rideon-wp-translator' ),
 				'best_for' => __( 'Simple emails, chats, short texts, non-critical translations', 'rideon-wp-translator' ),
@@ -292,7 +320,7 @@ class RideOn_Translator_Admin {
 				'cons'     => __( 'Less precise on long or technical texts', 'rideon-wp-translator' ),
 			),
 			'gpt-4.1' => array(
-				'label'    => 'GPT-4.1 (Balanced quality/price)',
+				'label'    => sprintf( 'GPT-4.1 (%s)', __( 'Balanced quality/price', 'rideon-wp-translator' ) ),
 				'cost'     => __( 'Medium', 'rideon-wp-translator' ),
 				'quality'  => __( 'Very High', 'rideon-wp-translator' ),
 				'best_for' => __( 'Professional documents, important emails, texts with specific tone (formal/informal)', 'rideon-wp-translator' ),
@@ -300,7 +328,7 @@ class RideOn_Translator_Admin {
 				'cons'     => __( 'Higher cost than 3.5', 'rideon-wp-translator' ),
 			),
 			'gpt-4o' => array(
-				'label'    => 'GPT-4o (Best quality)',
+				'label'    => sprintf( 'GPT-4o (%s)', __( 'Best quality', 'rideon-wp-translator' ) ),
 				'cost'     => __( 'Medium-High', 'rideon-wp-translator' ),
 				'quality'  => __( 'Excellent', 'rideon-wp-translator' ),
 				'best_for' => __( 'Long texts, technical documents, professional translations, content with stylistic nuances', 'rideon-wp-translator' ),
@@ -364,6 +392,26 @@ class RideOn_Translator_Admin {
 			});
 		})(jQuery);
 		</script>
+		<?php
+	}
+
+	/**
+	 * Render temperature field
+	 */
+	public function render_temperature_field() {
+		$temperature = get_option( 'rideon_translator_temperature', 0.3 );
+		?>
+		<input type="number" 
+		       id="rideon_translator_temperature" 
+		       name="rideon_translator_temperature" 
+		       value="<?php echo esc_attr( $temperature ); ?>" 
+		       min="0" 
+		       max="2" 
+		       step="0.1" 
+		       class="small-text" />
+		<p class="description">
+			<?php esc_html_e( 'Controls the randomness of the translation. Lower values (0.0-0.3) make the output more deterministic and focused. Higher values (0.7-2.0) make it more creative and varied. Default: 0.3', 'rideon-wp-translator' ); ?>
+		</p>
 		<?php
 	}
 

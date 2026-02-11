@@ -271,3 +271,18 @@ msgstr ""
 
 msgid "More expensive"
 msgstr ""
+
+msgid "Temperature"
+msgstr ""
+
+msgid "Controls the randomness of the translation. Lower values (0.0-0.3) make the output more deterministic and focused. Higher values (0.7-2.0) make it more creative and varied. Default: 0.3"
+msgstr ""
+
+msgid "Recommended for most use cases"
+msgstr ""
+
+msgid "Balanced quality/price"
+msgstr ""
+
+msgid "Best quality"
+msgstr ""

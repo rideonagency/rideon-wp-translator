@@ -228,6 +228,16 @@ class RideOn_Translator_OpenAI_Client {
 		// Sanitize prompt
 		$prompt = sanitize_text_field( $prompt );
 		
+		// Get temperature from settings, default to 0.3
+		$temperature = floatval( get_option( 'rideon_translator_temperature', 0.3 ) );
+		
+		// Ensure temperature is between 0 and 2
+		if ( $temperature < 0 ) {
+			$temperature = 0;
+		} elseif ( $temperature > 2 ) {
+			$temperature = 2;
+		}
+
 		$request_body = array(
 			'model'       => sanitize_text_field( $this->model ),
 			'messages'    => array(
@@ -236,7 +246,7 @@ class RideOn_Translator_OpenAI_Client {
 					'content' => $prompt,
 				),
 			),
-			'temperature' => 0.3,
+			'temperature' => $temperature,
 			'max_tokens'  => 4000,
 		);
 
