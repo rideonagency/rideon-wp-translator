@@ -111,9 +111,10 @@ class RideOn_Translator {
 	 * @param string $text Text to translate
 	 * @param string $source_lang Source language code
 	 * @param string $target_lang Target language code
+	 * @param bool   $is_content Whether this is post content (applies paragraph normalization)
 	 * @return string|WP_Error
 	 */
-	private function translate_text( $text, $source_lang, $target_lang ) {
+	private function translate_text( $text, $source_lang, $target_lang, $is_content = false ) {
 		if ( empty( $text ) ) {
 			return '';
 		}
@@ -122,7 +123,7 @@ class RideOn_Translator {
 		$source_lang = sanitize_text_field( $source_lang );
 		$target_lang = sanitize_text_field( $target_lang );
 
-		$response = $this->openai_client->translate( $text, $source_lang, $target_lang );
+		$response = $this->openai_client->translate( $text, $source_lang, $target_lang, $is_content );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -132,7 +133,19 @@ class RideOn_Translator {
 			return new WP_Error( 'empty_translation', __( 'Translation returned empty result.', 'rideon-wp-translator' ) );
 		}
 
-		return wp_kses_post( $response['translated_text'] );
+		// Log before wp_kses_post
+		if ( get_option( 'rideon_translator_enable_debug_log', false ) ) {
+			$this->log_text_before_sanitize( $response['translated_text'] );
+		}
+
+		$sanitized_result = wp_kses_post( $response['translated_text'] );
+
+		// Log after wp_kses_post
+		if ( get_option( 'rideon_translator_enable_debug_log', false ) ) {
+			$this->log_text_after_sanitize( $sanitized_result );
+		}
+
+		return $sanitized_result;
 	}
 
 	/**
@@ -202,13 +215,13 @@ class RideOn_Translator {
 		$content = $this->extract_post_content( $source_post );
 
 		// Translate title
-		$translated_title = $this->translate_text( $content['title'], $source_lang, $target_lang );
+		$translated_title = $this->translate_text( $content['title'], $source_lang, $target_lang, false );
 		if ( is_wp_error( $translated_title ) ) {
 			return $translated_title;
 		}
 
-		// Translate content
-		$translated_content = $this->translate_text( $content['content'], $source_lang, $target_lang );
+		// Translate content (with normalization for paragraph preservation)
+		$translated_content = $this->translate_text( $content['content'], $source_lang, $target_lang, true );
 		if ( is_wp_error( $translated_content ) ) {
 			return $translated_content;
 		}
@@ -216,7 +229,7 @@ class RideOn_Translator {
 		// Translate excerpt if exists
 		$translated_excerpt = '';
 		if ( ! empty( $content['excerpt'] ) ) {
-			$translated_excerpt_result = $this->translate_text( $content['excerpt'], $source_lang, $target_lang );
+			$translated_excerpt_result = $this->translate_text( $content['excerpt'], $source_lang, $target_lang, false );
 			if ( ! is_wp_error( $translated_excerpt_result ) ) {
 				$translated_excerpt = $translated_excerpt_result;
 			}
@@ -240,5 +253,45 @@ class RideOn_Translator {
 		}
 
 		return $result;
+	}
+
+	/**
+	 * Log text before sanitization with wp_kses_post
+	 *
+	 * @param string $text Text to log
+	 */
+	private function log_text_before_sanitize( $text ) {
+		$line_break_count = substr_count( $text, "\n" );
+		$double_line_break_count = substr_count( $text, "\n\n" );
+		
+		$visible_text = str_replace( "\n", "\\n\n", $text );
+		
+		error_log( '[RideOn Translator] ===== BEFORE wp_kses_post SANITIZATION =====' );
+		error_log( '[RideOn Translator] Length: ' . strlen( $text ) . ' chars' );
+		error_log( '[RideOn Translator] Line breaks (\\n): ' . $line_break_count );
+		error_log( '[RideOn Translator] Double line breaks (\\n\\n): ' . $double_line_break_count );
+		error_log( '[RideOn Translator] Text:' );
+		error_log( $visible_text );
+		error_log( '[RideOn Translator] ===== END BEFORE SANITIZATION =====' );
+	}
+
+	/**
+	 * Log text after sanitization with wp_kses_post
+	 *
+	 * @param string $text Text to log
+	 */
+	private function log_text_after_sanitize( $text ) {
+		$line_break_count = substr_count( $text, "\n" );
+		$double_line_break_count = substr_count( $text, "\n\n" );
+		
+		$visible_text = str_replace( "\n", "\\n\n", $text );
+		
+		error_log( '[RideOn Translator] ===== AFTER wp_kses_post SANITIZATION =====' );
+		error_log( '[RideOn Translator] Length: ' . strlen( $text ) . ' chars' );
+		error_log( '[RideOn Translator] Line breaks (\\n): ' . $line_break_count );
+		error_log( '[RideOn Translator] Double line breaks (\\n\\n): ' . $double_line_break_count );
+		error_log( '[RideOn Translator] Text:' );
+		error_log( $visible_text );
+		error_log( '[RideOn Translator] ===== END AFTER SANITIZATION =====' );
 	}
 }
