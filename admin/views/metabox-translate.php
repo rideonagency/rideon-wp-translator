@@ -47,6 +47,16 @@ $default_source_lang = get_option( 'rideon_translator_default_source_lang', 'it'
 			</a>
 		</p>
 
+		<button type="button" 
+		        id="rideon-translator-swap-btn" 
+		        class="button button-secondary" 
+		        style="margin-top: 10px; width: 100%;"
+		        title="<?php esc_attr_e( 'Swap source and target languages', 'rideon-wp-translator' ); ?>">
+			<span class="dashicons dashicons-arrow-left-alt2" style="vertical-align: middle;"></span>
+			<?php esc_html_e( 'Swap', 'rideon-wp-translator' ); ?>
+			<span class="dashicons dashicons-arrow-right-alt2" style="vertical-align: middle;"></span>
+		</button>
+
 		<label for="rideon-translator-target-lang" style="margin-top: 15px; display: block;">
 			<strong><?php esc_html_e( 'Translate to:', 'rideon-wp-translator' ); ?></strong>
 		</label>

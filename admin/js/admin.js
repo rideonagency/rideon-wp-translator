@@ -6,6 +6,7 @@
 
 	$(document).ready(function () {
 		const $translateBtn = $('#rideon-translator-translate-btn');
+		const $swapBtn = $('#rideon-translator-swap-btn');
 		const $sourceLang = $('#rideon-translator-source-lang');
 		const $targetLang = $('#rideon-translator-target-lang');
 		const $message = $('#rideon-translator-message');
@@ -13,6 +14,117 @@
 
 		// Check if we're on post edit screen
 		const isPostEditScreen = $('#post_ID').length > 0;
+
+		// Store pending translation content to apply when TinyMCE initializes
+		let pendingTranslationContent = null;
+
+		/**
+		 * Get TinyMCE editor instance for the 'content' editor (WordPress post content)
+		 * Returns a Promise that resolves with the editor instance
+		 */
+		function getTinyMCEEditor() {
+			return new Promise(function(resolve, reject) {
+				// If TinyMCE is not available, reject immediately
+				if (typeof tinymce === 'undefined') {
+					reject(new Error('TinyMCE is not available'));
+					return;
+				}
+
+				// Helper function to get the 'content' editor specifically
+				function getContentEditor() {
+					// Try to get editor by ID first (most reliable)
+					if (tinymce.get('content')) {
+						return tinymce.get('content');
+					}
+					// Fallback to activeEditor if it's the content editor
+					const activeEditor = tinymce.activeEditor;
+					if (activeEditor && activeEditor.id === 'content') {
+						return activeEditor;
+					}
+					return null;
+				}
+
+				// Check if content editor is already ready
+				const editor = getContentEditor();
+				if (editor && !editor.isHidden() && editor.initialized) {
+					resolve(editor);
+					return;
+				}
+
+				// Wait for editor to be initialized using events
+				let resolved = false;
+
+				// Function to check and resolve with content editor
+				function tryResolve(editorInstance) {
+					// Only resolve if it's the content editor
+					if (!resolved && editorInstance && editorInstance.id === 'content' && 
+						!editorInstance.isHidden() && editorInstance.initialized) {
+						resolved = true;
+						resolve(editorInstance);
+					}
+				}
+
+				// Listen for editor initialization using TinyMCE events
+				if (tinymce.on) {
+					// Listen for new editors being added
+					tinymce.on('AddEditor', function(e) {
+						const newEditor = e.editor;
+						newEditor.on('init', function() {
+							if (!resolved && newEditor.id === 'content') {
+								tryResolve(newEditor);
+							}
+						});
+					});
+
+					// Also check if editor already exists but isn't initialized yet
+					if (editor && !editor.initialized) {
+						editor.on('init', function() {
+							if (!resolved) {
+								tryResolve(editor);
+							}
+						});
+					}
+				}
+
+				// Listen for WordPress-specific TinyMCE events
+				$(document).on('tinymce-editor-init', function(event, editorInstance) {
+					if (!resolved && editorInstance && editorInstance.id === 'content') {
+						tryResolve(editorInstance);
+					}
+				});
+
+				// Fallback timeout (shouldn't be needed, but safety net)
+				setTimeout(function() {
+					if (!resolved) {
+						resolved = true;
+						// Try one last time
+						const finalEditor = getContentEditor();
+						if (finalEditor && !finalEditor.isHidden() && finalEditor.initialized) {
+							resolve(finalEditor);
+						} else {
+							reject(new Error('TinyMCE content editor not available after timeout'));
+						}
+					}
+				}, 5000);
+			});
+		}
+
+		// Handle swap button click
+		$swapBtn.on('click', function (e) {
+			e.preventDefault();
+			
+			const sourceValue = $sourceLang.val();
+			const targetValue = $targetLang.val();
+			
+			// Only swap if target language is selected
+			if (!targetValue) {
+				return;
+			}
+			
+			// Swap the values
+			$sourceLang.val(targetValue).trigger('change');
+			$targetLang.val(sourceValue).trigger('change');
+		});
 
 		// Handle translate button click
 		$translateBtn.on('click', function (e) {
@@ -102,96 +214,133 @@
 
 		/**
 		 * Update post content (handles both TinyMCE and textarea)
+		 * Uses Promise-based approach with event listeners instead of polling
 		 */
 		function updatePostContent(content) {
-
 			if (!content || content.trim() === '') {
-				console.warn('Empty content provided to updatePostContent');
 				return;
 			}
 
-			// Function to actually update the content
-			function doUpdate() {
-				// Check if TinyMCE is available
-				if (typeof tinymce !== 'undefined') {
-					// Try to get the active editor
-					const editor = tinymce.activeEditor;
-
-					if (editor && !editor.isHidden() && editor.initialized) {
-						// TinyMCE is active, use its API
-						editor.setContent(content);
-						// Trigger change event to mark content as modified
-						editor.fire('change');
-						editor.fire('input');
-						editor.nodeChanged();
-
-						// Also update the underlying textarea
-						const $content = $('#content');
-						if ($content.length) {
-							$content.val(content);
-							$content.trigger('input').trigger('change');
-						}
-
-						// Mark WordPress post as changed (for Gutenberg editor)
-						if (typeof wp !== 'undefined' && wp.data && wp.data.dispatch && wp.data.select('core/editor')) {
-							try {
-								wp.data.dispatch('core/editor').editPost({ content: content });
-							} catch (e) {
-								console.log('Could not update Gutenberg editor:', e);
-							}
-						}
-
-						// Mark classic editor as changed
-						if (typeof wp !== 'undefined' && wp.autosave) {
-							wp.autosave.server.triggerSave();
-						}
-
-						return true;
-					}
-				}
-
-				// Fallback to textarea
-				const $content = $('#content');
-				if ($content.length) {
-					$content.val(content);
-					$content.trigger('input').trigger('change');
-
-					// Mark WordPress post as changed (for Gutenberg editor)
-					if (typeof wp !== 'undefined' && wp.data && wp.data.dispatch && wp.data.select('core/editor')) {
-						try {
-							wp.data.dispatch('core/editor').editPost({ content: content });
-						} catch (e) {
-							console.log('Could not update Gutenberg editor:', e);
-						}
-					}
-
+			// Function to update TinyMCE editor content
+			function updateTinyMCE(editor) {
+				try {
+					editor.setContent(content, { format: 'raw' });
+					editor.fire('change');
+					editor.fire('input');
+					editor.nodeChanged();
 					return true;
-				} else {
-					console.error('Content textarea not found');
+				} catch (e) {
+					console.error('Error updating TinyMCE content:', e);
 					return false;
 				}
 			}
 
-			// Try to update immediately
-			if (doUpdate()) {
-				return;
+			// Function to update textarea
+			function updateTextarea() {
+				const $content = $('#content');
+				if ($content.length) {
+					$content.val(content);
+					$content.trigger('input').trigger('change');
+					return true;
+				}
+				return false;
 			}
 
-			// If TinyMCE is not ready, wait for it
-			if (typeof tinymce !== 'undefined') {
-				let attempts = 0;
-				const maxAttempts = 10;
-				const checkInterval = setInterval(function () {
-					attempts++;
-					if (doUpdate() || attempts >= maxAttempts) {
-						clearInterval(checkInterval);
-						if (attempts >= maxAttempts) {
-							console.error('Failed to update content after waiting for TinyMCE');
+			// Function to update Gutenberg editor
+			function updateGutenberg() {
+				if (typeof wp !== 'undefined' && wp.data && wp.data.dispatch) {
+					try {
+						const editorStore = wp.data.select('core/editor');
+						if (editorStore) {
+							wp.data.dispatch('core/editor').editPost({ content: content });
+							return true;
 						}
+					} catch (e) {
+						// Gutenberg editor not available, ignore
 					}
-				}, 200);
+				}
+				return false;
+			}
+
+			// Function to mark editor as changed
+			function markAsChanged() {
+				if (typeof wp !== 'undefined' && wp.autosave) {
+					wp.autosave.server.triggerSave();
+				}
+			}
+
+			// Always update textarea first (works for both TinyMCE and textarea-only mode)
+			updateTextarea();
+
+			// Try to update TinyMCE using Promise-based approach
+			if (typeof tinymce !== 'undefined') {
+				getTinyMCEEditor()
+					.then(function(editor) {
+						// Editor is ready, update it
+						updateTinyMCE(editor);
+						// Ensure textarea is still in sync
+						updateTextarea();
+						// Clear pending content
+						pendingTranslationContent = null;
+					})
+					.catch(function(error) {
+						// TinyMCE not available or timeout - textarea already updated
+						// Store content in case TinyMCE initializes later
+						pendingTranslationContent = content;
+					});
 			} else {
-				console.error('TinyMCE not available and textarea not found');
+				// No TinyMCE available, textarea already updated
+				pendingTranslationContent = null;
+			}
+
+			// Update Gutenberg editor if available
+			updateGutenberg();
+
+			// Mark editor as changed
+			markAsChanged();
+		}
+
+		// Listen for TinyMCE initialization to apply pending translations
+		// This handles the case where TinyMCE initializes after we've already tried to update
+		if (typeof tinymce !== 'undefined') {
+			// Function to apply pending translation
+			function applyPendingTranslation(editor) {
+				// Only apply to content editor, not other editors like acf_content
+				if (pendingTranslationContent && editor && editor.id === 'content' && 
+					editor.initialized && !editor.isHidden()) {
+					try {
+						editor.setContent(pendingTranslationContent, { format: 'raw' });
+						editor.fire('change');
+						editor.fire('input');
+						editor.nodeChanged();
+						
+						// Also update textarea to keep in sync
+						const $content = $('#content');
+						if ($content.length) {
+							$content.val(pendingTranslationContent);
+							$content.trigger('input').trigger('change');
+						}
+						
+						pendingTranslationContent = null;
+					} catch (e) {
+						console.error('Error applying pending translation to TinyMCE:', e);
+					}
+				}
+			}
+
+			// Listen for WordPress-specific TinyMCE events
+			$(document).on('tinymce-editor-init', function(event, editor) {
+				applyPendingTranslation(editor);
+			});
+
+			// Listen using TinyMCE's native event system
+			if (tinymce.on) {
+				tinymce.on('AddEditor', function(e) {
+					const editor = e.editor;
+					editor.on('init', function() {
+						applyPendingTranslation(editor);
+					});
+				});
 			}
 		}
 
