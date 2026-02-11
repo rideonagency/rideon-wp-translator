@@ -44,12 +44,6 @@ class RideOn_Translator {
 			return new WP_Error( 'post_not_found', __( 'Source post not found.', 'rideon-wp-translator' ) );
 		}
 
-		// Check if translation already exists
-		$existing_translation = $this->get_existing_translation( $post_id, $target_lang );
-		if ( $existing_translation ) {
-			return new WP_Error( 'translation_exists', __( 'Translation already exists for this language.', 'rideon-wp-translator' ), array( 'post_id' => $existing_translation ) );
-		}
-
 		// Detect source language if not provided
 		if ( empty( $source_lang ) ) {
 			$source_lang = get_option( 'rideon_translator_default_source_lang', 'it' );
@@ -93,9 +87,6 @@ class RideOn_Translator {
 		if ( is_wp_error( $translated_post_id ) ) {
 			return $translated_post_id;
 		}
-
-		// Link posts
-		$this->link_translations( $post_id, $translated_post_id, $target_lang );
 
 		return $translated_post_id;
 	}
@@ -158,14 +149,10 @@ class RideOn_Translator {
 			'post_title'    => sanitize_text_field( $translated_content['title'] ),
 			'post_content'  => wp_kses_post( $translated_content['content'] ),
 			'post_excerpt'  => sanitize_textarea_field( $translated_content['excerpt'] ),
-			'post_status'   => 'draft', // Create as draft for review
+			'post_status'   => sanitize_text_field( $source_post->post_status ),
 			'post_type'     => sanitize_text_field( $source_post->post_type ),
 			'post_author'   => absint( $source_post->post_author ),
 			'post_category' => array_map( 'absint', wp_get_post_categories( $source_post->ID ) ),
-			'meta_input'    => array(
-				'_translation_of' => absint( $source_post->ID ),
-				'_translated_to'  => sanitize_text_field( $target_lang ),
-			),
 		);
 
 		// Copy tags
@@ -189,45 +176,69 @@ class RideOn_Translator {
 		return $translated_post_id;
 	}
 
-	/**
-	 * Link original and translated posts
-	 *
-	 * @param int    $source_post_id Source post ID
-	 * @param int    $translated_post_id Translated post ID
-	 * @param string $target_lang Target language code
-	 */
-	private function link_translations( $source_post_id, $translated_post_id, $target_lang ) {
-		// Store translation link in source post
-		$existing_translations = get_post_meta( $source_post_id, '_translations', true );
-		if ( ! is_array( $existing_translations ) ) {
-			$existing_translations = array();
-		}
-		$existing_translations[ $target_lang ] = $translated_post_id;
-		update_post_meta( $source_post_id, '_translations', $existing_translations );
-	}
 
 	/**
-	 * Get existing translation for a post and language
+	 * Get translations for a post without creating a new post
+	 * Used for in-place translation in post editor
 	 *
-	 * @param int    $post_id Post ID
+	 * @param int    $post_id Post ID to translate
 	 * @param string $target_lang Target language code
-	 * @return int|false Translation post ID or false if not found
+	 * @param string $source_lang Source language code (optional, will use default if not provided)
+	 * @return array|WP_Error Array with translated title, content, and excerpt or WP_Error on failure
 	 */
-	private function get_existing_translation( $post_id, $target_lang ) {
-		$translations = get_post_meta( $post_id, '_translations', true );
-		if ( is_array( $translations ) && isset( $translations[ $target_lang ] ) ) {
-			return $translations[ $target_lang ];
+	public function get_translations( $post_id, $target_lang, $source_lang = '' ) {
+		// Get source post
+		$source_post = get_post( $post_id );
+		if ( ! $source_post ) {
+			return new WP_Error( 'post_not_found', __( 'Source post not found.', 'rideon-wp-translator' ) );
 		}
 
-		// Also check reverse (if this post is a translation)
-		$translation_of = get_post_meta( $post_id, '_translation_of', true );
-		if ( $translation_of ) {
-			$parent_translations = get_post_meta( $translation_of, '_translations', true );
-			if ( is_array( $parent_translations ) && isset( $parent_translations[ $target_lang ] ) ) {
-				return $parent_translations[ $target_lang ];
+		// Detect source language if not provided
+		if ( empty( $source_lang ) ) {
+			$source_lang = get_option( 'rideon_translator_default_source_lang', 'it' );
+		}
+
+		// Extract post content
+		$content = $this->extract_post_content( $source_post );
+
+		// Translate title
+		$translated_title = $this->translate_text( $content['title'], $source_lang, $target_lang );
+		if ( is_wp_error( $translated_title ) ) {
+			return $translated_title;
+		}
+
+		// Translate content
+		$translated_content = $this->translate_text( $content['content'], $source_lang, $target_lang );
+		if ( is_wp_error( $translated_content ) ) {
+			return $translated_content;
+		}
+
+		// Translate excerpt if exists
+		$translated_excerpt = '';
+		if ( ! empty( $content['excerpt'] ) ) {
+			$translated_excerpt_result = $this->translate_text( $content['excerpt'], $source_lang, $target_lang );
+			if ( ! is_wp_error( $translated_excerpt_result ) ) {
+				$translated_excerpt = $translated_excerpt_result;
 			}
 		}
 
-		return false;
+		$result = array(
+			'title'   => $translated_title,
+			'content' => $translated_content,
+			'excerpt' => $translated_excerpt,
+		);
+
+		// Log debug info if enabled
+		if ( get_option( 'rideon_translator_enable_debug_log', false ) ) {
+			error_log( '[RideOn Translator] get_translations result | Context: ' . wp_json_encode( array(
+				'title_length'   => strlen( $result['title'] ),
+				'content_length' => strlen( $result['content'] ),
+				'excerpt_length' => strlen( $result['excerpt'] ),
+				'title_preview'  => substr( $result['title'], 0, 50 ),
+				'content_preview' => substr( $result['content'], 0, 100 ),
+			) ) );
+		}
+
+		return $result;
 	}
 }

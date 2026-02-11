@@ -1,0 +1,288 @@
+# Copyright (C) 2025 RideOn
+# This file is distributed under the same license as the RideOn WP Translator plugin.
+msgid ""
+msgstr ""
+"Project-Id-Version: RideOn WP Translator 1.0.0\n"
+"Report-Msgid-Bugs-To: https://github.com/rideon-wp-translator\n"
+"POT-Creation-Date: 2025-02-11 12:00+0000\n"
+"PO-Revision-Date: 2025-02-11 12:00+0000\n"
+"Last-Translator: Ride On Agency <info@rideonagency.com>\n"
+"Language-Team: Italian\n"
+"Language: it_IT\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+msgid "Translate"
+msgstr "Traduci"
+
+msgid "Translating..."
+msgstr "Traduzione in corso..."
+
+msgid "Translation completed successfully!"
+msgstr "Traduzione completata con successo!"
+
+msgid "An error occurred during translation."
+msgstr "Si è verificato un errore durante la traduzione."
+
+msgid "OpenAI API key is not configured."
+msgstr "La chiave API di OpenAI non è configurata."
+
+msgid "Text to translate is empty."
+msgstr "Il testo da tradurre è vuoto."
+
+msgid "Unknown API error."
+msgstr "Errore API sconosciuto."
+
+msgid "Invalid response from OpenAI API."
+msgstr "Risposta non valida dall'API di OpenAI."
+
+msgid "API key is not set."
+msgstr "La chiave API non è impostata."
+
+msgid "Source post not found."
+msgstr "Post sorgente non trovato."
+
+msgid "Translation already exists for this language."
+msgstr "La traduzione esiste già per questa lingua."
+
+msgid "Translation returned empty result."
+msgstr "La traduzione ha restituito un risultato vuoto."
+
+msgid "Please configure your OpenAI API key in"
+msgstr "Configura la tua chiave API di OpenAI in"
+
+msgid "Settings"
+msgstr "Impostazioni"
+
+msgid "Ride On Translator Settings"
+msgstr "Impostazioni Ride On Translator"
+
+msgid "Ride On Translator"
+msgstr "Ride On Translator"
+
+msgid "Save Settings"
+msgstr "Salva Impostazioni"
+
+msgid "Configure your OpenAI API credentials. You can get your API key from https://platform.openai.com/api-keys"
+msgstr "Configura le tue credenziali API di OpenAI. Puoi ottenere la tua chiave API da https://platform.openai.com/api-keys"
+
+msgid "API Key"
+msgstr "Chiave API"
+
+msgid "Your OpenAI API key. Keep this secure and never share it publicly."
+msgstr "La tua chiave API di OpenAI. Mantienila sicura e non condividerla mai pubblicamente."
+
+msgid "Model"
+msgstr "Modello"
+
+msgid "Choose the OpenAI model to use for translations."
+msgstr "Scegli il modello OpenAI da utilizzare per le traduzioni."
+
+msgid "Set default source and target languages for translations."
+msgstr "Imposta le lingue di origine e destinazione predefinite per le traduzioni."
+
+msgid "Default Source Language"
+msgstr "Lingua di Origine Predefinita"
+
+msgid "Default Target Language"
+msgstr "Lingua di Destinazione Predefinita"
+
+msgid "Italian"
+msgstr "Italiano"
+
+msgid "English"
+msgstr "Inglese"
+
+msgid "Spanish"
+msgstr "Spagnolo"
+
+msgid "French"
+msgstr "Francese"
+
+msgid "German"
+msgstr "Tedesco"
+
+msgid "Portuguese"
+msgstr "Portoghese"
+
+msgid "Russian"
+msgstr "Russo"
+
+msgid "Chinese"
+msgstr "Cinese"
+
+msgid "Japanese"
+msgstr "Giapponese"
+
+msgid "Korean"
+msgstr "Coreano"
+
+msgid "Arabic"
+msgstr "Arabo"
+
+msgid "Settings saved successfully!"
+msgstr "Impostazioni salvate con successo!"
+
+msgid "Existing Translations"
+msgstr "Traduzioni Esistenti"
+
+msgid "Translate to:"
+msgstr "Traduci in:"
+
+msgid "Select language..."
+msgstr "Seleziona lingua..."
+
+msgid "Security check failed."
+msgstr "Controllo di sicurezza fallito."
+
+msgid "You do not have permission to translate posts."
+msgstr "Non hai il permesso di tradurre i post."
+
+msgid "Invalid parameters."
+msgstr "Parametri non validi."
+
+msgid "Post not found."
+msgstr "Post non trovato."
+
+msgid "You do not have permission to edit this post."
+msgstr "Non hai il permesso di modificare questo post."
+
+msgid "Invalid API key. Please check your OpenAI API key in settings."
+msgstr "Chiave API non valida. Controlla la tua chiave API di OpenAI nelle impostazioni."
+
+msgid "Rate limit exceeded. Please try again later."
+msgstr "Limite di richieste superato. Riprova più tardi."
+
+msgid "OpenAI service is temporarily unavailable. Please try again later."
+msgstr "Il servizio OpenAI è temporaneamente non disponibile. Riprova più tardi."
+
+msgid "OpenAI API Configuration"
+msgstr "Configurazione API OpenAI"
+
+msgid "Configure your OpenAI API credentials to enable translations."
+msgstr "Configura le tue credenziali API di OpenAI per abilitare le traduzioni."
+
+msgid "Getting your API key:"
+msgstr "Come ottenere la tua chiave API:"
+
+msgid "1. Visit"
+msgstr "1. Visita"
+
+msgid "2. Sign in or create an account"
+msgstr "2. Accedi o crea un account"
+
+msgid "3. Create a new API key"
+msgstr "3. Crea una nuova chiave API"
+
+msgid "4. Copy and paste it here"
+msgstr "4. Copia e incollala qui"
+
+msgid "Note:"
+msgstr "Nota:"
+
+msgid "Your API key is encrypted before storage. Keep it secure and never share it publicly."
+msgstr "La tua chiave API viene crittografata prima della memorizzazione. Mantienila sicura e non condividerla mai pubblicamente."
+
+msgid "Cost:"
+msgstr "Costo:"
+
+msgid "Quality:"
+msgstr "Qualità:"
+
+msgid "Best for:"
+msgstr "Ideale per:"
+
+msgid "Pros:"
+msgstr "Vantaggi:"
+
+msgid "Cons:"
+msgstr "Svantaggi:"
+
+msgid "Choose the OpenAI model to use for translations. The information above will update based on your selection."
+msgstr "Scegli il modello OpenAI da utilizzare per le traduzioni. Le informazioni sopra si aggiorneranno in base alla tua selezione."
+
+msgid "Default Languages"
+msgstr "Lingue Predefinite"
+
+msgid "Debug Settings"
+msgstr "Impostazioni di Debug"
+
+msgid "Enable Debug Logging"
+msgstr "Abilita Registrazione Debug"
+
+msgid "Enable debug logging to troubleshoot API issues. Logs will be written to WordPress debug.log file."
+msgstr "Abilita la registrazione debug per risolvere i problemi dell'API. I log verranno scritti nel file debug.log di WordPress."
+
+msgid "Enable debug logging to debug.log"
+msgstr "Abilita la registrazione debug su debug.log"
+
+msgid "When enabled, detailed API requests and responses will be logged to wp-content/debug.log. Make sure WP_DEBUG_LOG is enabled in wp-config.php."
+msgstr "Quando abilitato, le richieste e risposte dettagliate dell'API verranno registrate in wp-content/debug.log. Assicurati che WP_DEBUG_LOG sia abilitato in wp-config.php."
+
+msgid "Source Language:"
+msgstr "Lingua di Origine:"
+
+msgid "Default can be changed in"
+msgstr "Il predefinito può essere modificato in"
+
+msgid "Low"
+msgstr "Basso"
+
+msgid "Good"
+msgstr "Buona"
+
+msgid "Simple emails, chats, short texts, non-critical translations"
+msgstr "Email semplici, chat, testi brevi, traduzioni non critiche"
+
+msgid "Economical, fast"
+msgstr "Economico, veloce"
+
+msgid "Less precise on long or technical texts"
+msgstr "Meno preciso su testi lunghi o tecnici"
+
+msgid "Medium"
+msgstr "Medio"
+
+msgid "Very High"
+msgstr "Molto Alta"
+
+msgid "Professional documents, important emails, texts with specific tone (formal/informal)"
+msgstr "Documenti professionali, email importanti, testi con tono specifico (formale/informale)"
+
+msgid "Better context understanding, more natural translations"
+msgstr "Migliore comprensione del contesto, traduzioni più naturali"
+
+msgid "Higher cost than 3.5"
+msgstr "Costo più alto rispetto a 3.5"
+
+msgid "Medium-High"
+msgstr "Medio-Alto"
+
+msgid "Excellent"
+msgstr "Eccellente"
+
+msgid "Long texts, technical documents, professional translations, content with stylistic nuances"
+msgstr "Testi lunghi, documenti tecnici, traduzioni professionali, contenuti con sfumature stilistiche"
+
+msgid "Maximum accuracy, excellent tone handling, consistency on complex texts"
+msgstr "Massima precisione, gestione eccellente del tono, coerenza su testi complessi"
+
+msgid "More expensive"
+msgstr "Più costoso"
+
+msgid "Temperature"
+msgstr "Temperatura"
+
+msgid "Controls the randomness of the translation. Lower values (0.0-0.3) make the output more deterministic and focused. Higher values (0.7-2.0) make it more creative and varied. Default: 0.3"
+msgstr "Controlla la casualità della traduzione. Valori più bassi (0.0-0.3) rendono l'output più deterministico e focalizzato. Valori più alti (0.7-2.0) lo rendono più creativo e vario. Predefinito: 0.3"
+
+msgid "Recommended for most use cases"
+msgstr "Consigliato per la maggior parte dei casi d'uso"
+
+msgid "Balanced quality/price"
+msgstr "Qualità/prezzo bilanciato"
+
+msgid "Best quality"
+msgstr "Migliore qualità"

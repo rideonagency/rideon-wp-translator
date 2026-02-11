@@ -40,6 +40,7 @@ class RideOn_Translator_Post_Handler {
 	private function __construct() {
 		add_action( 'add_meta_boxes', array( $this, 'add_translation_metabox' ) );
 		add_action( 'wp_ajax_rideon_translate_post', array( $this, 'handle_ajax_translation' ) );
+		add_action( 'wp_ajax_rideon_get_translations', array( $this, 'handle_ajax_get_translations' ) );
 	}
 
 	/**
@@ -57,7 +58,7 @@ class RideOn_Translator_Post_Handler {
 
 		add_meta_box(
 			'rideon_translator_metabox',
-			__( 'RideOn Translator', 'rideon-wp-translator' ),
+			__( 'Ride On Translator', 'rideon-wp-translator' ),
 			array( $this, 'render_metabox' ),
 			$post_type,
 			'side',
@@ -82,23 +83,7 @@ class RideOn_Translator_Post_Handler {
 			return;
 		}
 
-		// Get existing translations
-		$translations = get_post_meta( $post->ID, '_translations', true );
-		if ( ! is_array( $translations ) ) {
-			$translations = array();
-		}
-
-		// Check if this post is a translation
-		$translation_of = get_post_meta( $post->ID, '_translation_of', true );
-		if ( $translation_of ) {
-			$parent_translations = get_post_meta( $translation_of, '_translations', true );
-			if ( is_array( $parent_translations ) ) {
-				$translations = $parent_translations;
-			}
-			$source_post_id = $translation_of;
-		} else {
-			$source_post_id = $post->ID;
-		}
+		$source_post_id = $post->ID;
 
 		include RIDEON_TRANSLATOR_PLUGIN_DIR . 'admin/views/metabox-translate.php';
 	}
@@ -119,6 +104,7 @@ class RideOn_Translator_Post_Handler {
 
 		// Get parameters
 		$post_id     = isset( $_POST['post_id'] ) ? intval( $_POST['post_id'] ) : 0;
+		$source_lang = isset( $_POST['source_lang'] ) ? sanitize_text_field( wp_unslash( $_POST['source_lang'] ) ) : '';
 		$target_lang = isset( $_POST['target_lang'] ) ? sanitize_text_field( wp_unslash( $_POST['target_lang'] ) ) : '';
 
 		if ( empty( $post_id ) || empty( $target_lang ) ) {
@@ -136,9 +122,9 @@ class RideOn_Translator_Post_Handler {
 			wp_send_json_error( array( 'message' => __( 'You do not have permission to edit this post.', 'rideon-wp-translator' ) ) );
 		}
 
-		// Perform translation
+		// Perform translation (source_lang is optional, will use default if empty)
 		$translator = new RideOn_Translator();
-		$result     = $translator->translate_post( $post_id, $target_lang );
+		$result     = $translator->translate_post( $post_id, $target_lang, $source_lang );
 
 		if ( is_wp_error( $result ) ) {
 			wp_send_json_error( array( 'message' => $result->get_error_message() ) );
@@ -152,6 +138,58 @@ class RideOn_Translator_Post_Handler {
 				'message'   => __( 'Translation completed successfully!', 'rideon-wp-translator' ),
 				'post_id'   => $result,
 				'edit_link' => $edit_link,
+			)
+		);
+	}
+
+	/**
+	 * Handle AJAX request to get translations without creating a new post
+	 * Used for in-place translation in post editor
+	 */
+	public function handle_ajax_get_translations() {
+		// Verify nonce
+		if ( ! isset( $_POST['nonce'] ) || ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['nonce'] ) ), 'rideon_translator_nonce' ) ) {
+			wp_send_json_error( array( 'message' => __( 'Security check failed.', 'rideon-wp-translator' ) ) );
+		}
+
+		// Check user capability
+		if ( ! current_user_can( 'edit_posts' ) ) {
+			wp_send_json_error( array( 'message' => __( 'You do not have permission to translate posts.', 'rideon-wp-translator' ) ) );
+		}
+
+		// Get parameters
+		$post_id     = isset( $_POST['post_id'] ) ? intval( $_POST['post_id'] ) : 0;
+		$source_lang = isset( $_POST['source_lang'] ) ? sanitize_text_field( wp_unslash( $_POST['source_lang'] ) ) : '';
+		$target_lang = isset( $_POST['target_lang'] ) ? sanitize_text_field( wp_unslash( $_POST['target_lang'] ) ) : '';
+
+		if ( empty( $post_id ) || empty( $target_lang ) ) {
+			wp_send_json_error( array( 'message' => __( 'Invalid parameters.', 'rideon-wp-translator' ) ) );
+		}
+
+		// Check if post exists
+		$post = get_post( $post_id );
+		if ( ! $post ) {
+			wp_send_json_error( array( 'message' => __( 'Post not found.', 'rideon-wp-translator' ) ) );
+		}
+
+		// Check user can edit this post
+		if ( ! current_user_can( 'edit_post', $post_id ) ) {
+			wp_send_json_error( array( 'message' => __( 'You do not have permission to edit this post.', 'rideon-wp-translator' ) ) );
+		}
+
+		// Get translations (source_lang is optional, will use default if empty)
+		$translator = new RideOn_Translator();
+		$result     = $translator->get_translations( $post_id, $target_lang, $source_lang );
+
+		if ( is_wp_error( $result ) ) {
+			wp_send_json_error( array( 'message' => $result->get_error_message() ) );
+		}
+
+		wp_send_json_success(
+			array(
+				'title'   => $result['title'],
+				'content' => $result['content'],
+				'excerpt' => $result['excerpt'],
 			)
 		);
 	}
