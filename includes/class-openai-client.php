@@ -97,14 +97,19 @@ class RideOn_Translator_OpenAI_Client {
 	 * @param string $text Text to translate
 	 * @param string $source_lang Source language code
 	 * @param string $target_lang Target language code
+	 * @param bool   $is_content Whether this is post content (applies paragraph normalization)
 	 * @return array|WP_Error Response array with translated text or WP_Error on failure
 	 */
-	public function translate( $text, $source_lang, $target_lang ) {
+	public function translate( $text, $source_lang, $target_lang, $is_content = false ) {
 		$this->log_debug( 'Translation request started', array(
 			'source_lang' => $source_lang,
 			'target_lang' => $target_lang,
 			'text_length' => strlen( $text ),
+			'is_content' => $is_content,
 		) );
+
+		// Log original text with visible line breaks for debugging
+		$this->log_text_debug( 'ORIGINAL TEXT RECEIVED', $text );
 
 		if ( empty( $this->api_key ) ) {
 			$this->log_debug( 'Translation failed: API key not configured' );
@@ -116,7 +121,10 @@ class RideOn_Translator_OpenAI_Client {
 			return new WP_Error( 'empty_text', __( 'Text to translate is empty.', 'rideon-wp-translator' ) );
 		}
 
-		$prompt = $this->build_translation_prompt( $text, $source_lang, $target_lang );
+		$prompt = $this->build_translation_prompt( $text, $source_lang, $target_lang, $is_content );
+
+		// Log the prompt being sent
+		$this->log_text_debug( 'PROMPT BEING SENT TO API', $prompt );
 
 		$response = $this->make_api_request( $prompt );
 
@@ -139,6 +147,11 @@ class RideOn_Translator_OpenAI_Client {
 			$this->log_debug( 'Translation completed successfully', array(
 				'translated_length' => isset( $result['translated_text'] ) ? strlen( $result['translated_text'] ) : 0,
 			) );
+			
+			// Log translated text with visible line breaks for debugging
+			if ( isset( $result['translated_text'] ) ) {
+				$this->log_text_debug( 'TRANSLATED TEXT RECEIVED FROM API', $result['translated_text'] );
+			}
 		}
 
 		return $result;
@@ -150,18 +163,136 @@ class RideOn_Translator_OpenAI_Client {
 	 * @param string $text Text to translate
 	 * @param string $source_lang Source language code
 	 * @param string $target_lang Target language code
+	 * @param bool   $is_content Whether this is post content (applies paragraph normalization)
 	 * @return string
 	 */
-	private function build_translation_prompt( $text, $source_lang, $target_lang ) {
+	private function build_translation_prompt( $text, $source_lang, $target_lang, $is_content = false ) {
 		$source_lang_name = $this->get_language_name( $source_lang );
 		$target_lang_name = $this->get_language_name( $target_lang );
 
-		return sprintf(
-			'Translate the following text from %s to %s. Maintain the same tone, style, and formatting. Only return the translated text without any additional explanations or notes.\n\n%s',
-			$source_lang_name,
-			$target_lang_name,
-			$text
-		);
+		// Normalize content only if it's post content (not title or excerpt)
+		if ( $is_content ) {
+			// Normalize content: convert plain text paragraphs to HTML for better preservation
+			$normalized_text = $this->normalize_content_for_translation( $text );
+			$this->log_text_debug( 'TEXT AFTER NORMALIZATION', $normalized_text );
+		} else {
+			// For title and excerpt, use text as is
+			$normalized_text = $text;
+		}
+
+		// Sanitize the text content to remove potentially dangerous HTML while preserving formatting
+		// Use wp_kses_post to allow safe HTML tags (p, strong, em, br, etc.) while removing dangerous ones
+		$sanitized_text = wp_kses_post( $normalized_text );
+		$this->log_text_debug( 'TEXT AFTER SANITIZATION (wp_kses_post)', $sanitized_text );
+
+		// Check if text contains HTML tags
+		$contains_html = $this->contains_html( $sanitized_text );
+		$this->log_debug( 'Content analysis', array(
+			'contains_html' => $contains_html,
+			'is_content' => $is_content,
+		) );
+
+		if ( $contains_html ) {
+			// HTML-aware translation prompt with explicit paragraph and blank line preservation
+			return sprintf(
+				'Translate the following HTML content from %s to %s.\n\nCRITICAL INSTRUCTIONS:\n- Preserve ALL HTML tags, attributes, and structure exactly as they are\n- Only translate the text content inside the tags, not the tags themselves\n- CRITICAL: Preserve blank lines (empty lines) between HTML blocks exactly as they appear\n- If there is a blank line between two HTML blocks, keep that blank line in the translation\n- Preserve paragraph breaks: keep <p> tags and double line breaks between paragraphs\n- Maintain the same tone, style, and formatting\n- Do not modify, remove, or add any HTML tags\n- Do NOT remove blank lines that exist between paragraphs\n- Return only the translated HTML without any additional explanations or notes\n\n%s',
+				$source_lang_name,
+				$target_lang_name,
+				$sanitized_text
+			);
+		} else {
+			// Plain text translation prompt
+			if ( $is_content ) {
+				// For content, emphasize paragraph preservation with very explicit instructions
+				return sprintf(
+					'Translate the following text from %s to %s.\n\nCRITICAL INSTRUCTIONS FOR PARAGRAPH PRESERVATION:\n- You MUST preserve the exact paragraph structure\n- Where you see TWO consecutive line breaks (blank line), keep TWO consecutive line breaks in the translation\n- Do NOT merge paragraphs that are separated by blank lines\n- Do NOT add extra line breaks where there are none\n- Maintain the same tone, style, and formatting\n- Return ONLY the translated text without any additional explanations or notes\n\nText to translate:\n%s',
+					$source_lang_name,
+					$target_lang_name,
+					$sanitized_text
+				);
+			} else {
+				// For title/excerpt, simple translation
+				return sprintf(
+					'Translate the following text from %s to %s. Maintain the same tone, style, and formatting. Only return the translated text without any additional explanations or notes.\n\n%s',
+					$source_lang_name,
+					$target_lang_name,
+					$sanitized_text
+				);
+			}
+		}
+	}
+
+	/**
+	 * Normalize content for translation to ensure paragraph structure is preserved
+	 * For both plain text and HTML: ensures line breaks and blank lines are preserved
+	 *
+	 * @param string $text Text to normalize
+	 * @return string Normalized text
+	 */
+	private function normalize_content_for_translation( $text ) {
+		// First, normalize Windows line breaks (\r\n) to Unix (\n)
+		// This handles cases like \r\n\n (Windows line break + blank line)
+		$text = str_replace( "\r\n", "\n", $text );
+		
+		// Then normalize Mac line breaks (\r) to Unix (\n)
+		$text = str_replace( "\r", "\n", $text );
+		
+		// Normalize blank lines: convert patterns like \n[spaces/tabs]\n to \n\n
+		// This preserves paragraph breaks while normalizing whitespace
+		$text = preg_replace( '/\n[ \t]+\n/', "\n\n", $text );
+		
+		// For HTML content: convert double line breaks to <p> tags for better preservation
+		// This ensures paragraph structure is explicit and preserved by the API
+		if ( $this->contains_html( $text ) ) {
+			// Split by double line breaks to identify paragraphs
+			$paragraphs = preg_split( '/\n\s*\n/', $text );
+			
+			// Filter out empty paragraphs
+			$paragraphs = array_filter( $paragraphs, function( $para ) {
+				return trim( $para ) !== '';
+			} );
+			
+			// If we have multiple paragraphs, wrap them in <p> tags
+			if ( count( $paragraphs ) > 1 ) {
+				$wrapped_paragraphs = array();
+				foreach ( $paragraphs as $para ) {
+					$trimmed = trim( $para );
+					if ( ! empty( $trimmed ) ) {
+						// Preserve single line breaks within paragraphs as <br>
+						$trimmed = nl2br( $trimmed, false );
+						$wrapped_paragraphs[] = '<p>' . $trimmed . '</p>';
+					}
+				}
+				$text = implode( "\n\n", $wrapped_paragraphs );
+			} elseif ( count( $paragraphs ) === 1 ) {
+				// Single paragraph: wrap in <p> tag
+				$first_para = trim( reset( $paragraphs ) );
+				if ( ! empty( $first_para ) ) {
+					$first_para = nl2br( $first_para, false );
+					$text = '<p>' . $first_para . '</p>';
+				}
+			}
+			
+			// Ensure we don't have more than 2 consecutive newlines
+			$text = preg_replace( '/\n{3,}/', "\n\n", $text );
+		} else {
+			// For plain text: ensure double line breaks are preserved
+			$text = preg_replace( '/\n{3,}/', "\n\n", $text );
+		}
+		
+		return $text;
+	}
+
+	/**
+	 * Check if text contains HTML tags
+	 *
+	 * @param string $text Text to check
+	 * @return bool True if text contains HTML tags
+	 */
+	private function contains_html( $text ) {
+		// Check for HTML tags (simple but effective check)
+		// This will match tags like <p>, </p>, <strong>, <br>, etc.
+		return preg_match( '/<[^>]+>/', $text ) === 1;
 	}
 
 	/**
@@ -209,6 +340,38 @@ class RideOn_Translator_OpenAI_Client {
 	}
 
 	/**
+	 * Log text content with visible line breaks and special characters for debugging
+	 *
+	 * @param string $label Label for the log entry
+	 * @param string $text Text to log
+	 */
+	private function log_text_debug( $label, $text ) {
+		if ( ! $this->is_debug_log_enabled() ) {
+			return;
+		}
+
+		// Show text with visible line breaks and special characters
+		$visible_text = $text;
+		$visible_text = str_replace( "\r\n", "\\r\\n\n", $visible_text );
+		$visible_text = str_replace( "\r", "\\r\n", $visible_text );
+		$visible_text = str_replace( "\n", "\\n\n", $visible_text );
+		$visible_text = str_replace( "\t", "\\t", $visible_text );
+		
+		// Count line breaks
+		$line_break_count = substr_count( $text, "\n" );
+		$double_line_break_count = substr_count( $text, "\n\n" );
+		
+		error_log( '[RideOn Translator] ===== ' . $label . ' =====' );
+		error_log( '[RideOn Translator] Length: ' . strlen( $text ) . ' chars' );
+		error_log( '[RideOn Translator] Line breaks (\\n): ' . $line_break_count );
+		error_log( '[RideOn Translator] Double line breaks (\\n\\n): ' . $double_line_break_count );
+		error_log( '[RideOn Translator] Contains HTML: ' . ( $this->contains_html( $text ) ? 'YES' : 'NO' ) );
+		error_log( '[RideOn Translator] Text with visible breaks:' );
+		error_log( $visible_text );
+		error_log( '[RideOn Translator] ===== END ' . $label . ' =====' );
+	}
+
+	/**
 	 * Check if debug logging is enabled
 	 *
 	 * @return bool
@@ -225,8 +388,8 @@ class RideOn_Translator_OpenAI_Client {
 	 * @return array|WP_Error
 	 */
 	private function make_api_request( $prompt ) {
-		// Sanitize prompt
-		$prompt = sanitize_text_field( $prompt );
+		// Prompt is already sanitized in build_translation_prompt
+		// No need to sanitize again here as it would remove HTML formatting
 		
 		// Get temperature from settings, default to 0.3
 		$temperature = floatval( get_option( 'rideon_translator_temperature', 0.3 ) );
