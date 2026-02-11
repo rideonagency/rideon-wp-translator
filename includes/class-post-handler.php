@@ -83,13 +83,7 @@ class RideOn_Translator_Post_Handler {
 			return;
 		}
 
-		// Get source post ID
-		$translation_of = get_post_meta( $post->ID, '_translation_of', true );
-		if ( $translation_of ) {
-			$source_post_id = $translation_of;
-		} else {
-			$source_post_id = $post->ID;
-		}
+		$source_post_id = $post->ID;
 
 		include RIDEON_TRANSLATOR_PLUGIN_DIR . 'admin/views/metabox-translate.php';
 	}

@@ -194,7 +194,25 @@ class RideOn_Translator_Admin {
 	 * Render API section description
 	 */
 	public function render_api_section_description() {
-		echo '<p>' . esc_html__( 'Configure your OpenAI API credentials. You can get your API key from https://platform.openai.com/api-keys', 'rideon-wp-translator' ) . '</p>';
+		?>
+		<p>
+			<?php esc_html_e( 'Configure your OpenAI API credentials to enable translations.', 'rideon-wp-translator' ); ?>
+		</p>
+		<p>
+			<strong><?php esc_html_e( 'Getting your API key:', 'rideon-wp-translator' ); ?></strong><br>
+			<?php esc_html_e( '1. Visit', 'rideon-wp-translator' ); ?> 
+			<a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener noreferrer">
+				https://platform.openai.com/api-keys
+			</a><br>
+			<?php esc_html_e( '2. Sign in or create an account', 'rideon-wp-translator' ); ?><br>
+			<?php esc_html_e( '3. Create a new API key', 'rideon-wp-translator' ); ?><br>
+			<?php esc_html_e( '4. Copy and paste it here', 'rideon-wp-translator' ); ?>
+		</p>
+		<p class="description" style="margin-top: 10px;">
+			<strong><?php esc_html_e( 'Note:', 'rideon-wp-translator' ); ?></strong> 
+			<?php esc_html_e( 'Your API key is encrypted before storage. Keep it secure and never share it publicly.', 'rideon-wp-translator' ); ?>
+		</p>
+		<?php
 	}
 
 	/**
@@ -221,18 +239,131 @@ class RideOn_Translator_Admin {
 	 */
 	public function render_model_field() {
 		$model = get_option( 'rideon_translator_model', 'gpt-3.5-turbo' );
+		$models_info = $this->get_models_info();
 		?>
-		<select id="rideon_translator_model" name="rideon_translator_model">
-			<option value="gpt-3.5-turbo" <?php selected( $model, 'gpt-3.5-turbo' ); ?>>
-				GPT-3.5 Turbo (Faster, Lower Cost)
-			</option>
-			<option value="gpt-4-turbo-preview" <?php selected( $model, 'gpt-4-turbo-preview' ); ?>>
-				GPT-4 Turbo (Higher Quality)
-			</option>
+		<select id="rideon_translator_model" name="rideon_translator_model" class="regular-text">
+			<?php foreach ( $models_info as $model_id => $info ) : ?>
+				<option value="<?php echo esc_attr( $model_id ); ?>" <?php selected( $model, $model_id ); ?>>
+					<?php echo esc_html( $info['label'] ); ?>
+				</option>
+			<?php endforeach; ?>
 		</select>
-		<p class="description">
-			<?php esc_html_e( 'Choose the OpenAI model to use for translations.', 'rideon-wp-translator' ); ?>
+		<div id="rideon_model_info">
+			<?php
+			$selected_model_info = $models_info[ $model ] ?? $models_info['gpt-3.5-turbo'];
+			?>
+			<strong><?php echo esc_html( $selected_model_info['label'] ); ?></strong>
+			<p>
+				<strong><?php esc_html_e( 'Cost:', 'rideon-wp-translator' ); ?></strong> <?php echo esc_html( $selected_model_info['cost'] ); ?><br>
+				<strong><?php esc_html_e( 'Quality:', 'rideon-wp-translator' ); ?></strong> <?php echo esc_html( $selected_model_info['quality'] ); ?><br>
+				<strong><?php esc_html_e( 'Best for:', 'rideon-wp-translator' ); ?></strong> <?php echo esc_html( $selected_model_info['best_for'] ); ?>
+			</p>
+			<?php if ( ! empty( $selected_model_info['pros'] ) ) : ?>
+				<p>
+					<strong><?php esc_html_e( 'Pros:', 'rideon-wp-translator' ); ?></strong> <?php echo esc_html( $selected_model_info['pros'] ); ?>
+				</p>
+			<?php endif; ?>
+			<?php if ( ! empty( $selected_model_info['cons'] ) ) : ?>
+				<p>
+					<strong><?php esc_html_e( 'Cons:', 'rideon-wp-translator' ); ?></strong> <?php echo esc_html( $selected_model_info['cons'] ); ?>
+				</p>
+			<?php endif; ?>
+		</div>
+		<p class="description" style="margin-top: 10px;">
+			<?php esc_html_e( 'Choose the OpenAI model to use for translations. The information above will update based on your selection.', 'rideon-wp-translator' ); ?>
 		</p>
+		<?php
+		$this->enqueue_model_info_script();
+	}
+
+	/**
+	 * Get models information
+	 *
+	 * @return array Models information array
+	 */
+	private function get_models_info() {
+		return array(
+			'gpt-3.5-turbo' => array(
+				'label'    => 'GPT-3.5 Turbo (Recommended for most use cases)',
+				'cost'     => __( 'Low', 'rideon-wp-translator' ),
+				'quality'  => __( 'Good', 'rideon-wp-translator' ),
+				'best_for' => __( 'Simple emails, chats, short texts, non-critical translations', 'rideon-wp-translator' ),
+				'pros'     => __( 'Economical, fast', 'rideon-wp-translator' ),
+				'cons'     => __( 'Less precise on long or technical texts', 'rideon-wp-translator' ),
+			),
+			'gpt-4.1' => array(
+				'label'    => 'GPT-4.1 (Balanced quality/price)',
+				'cost'     => __( 'Medium', 'rideon-wp-translator' ),
+				'quality'  => __( 'Very High', 'rideon-wp-translator' ),
+				'best_for' => __( 'Professional documents, important emails, texts with specific tone (formal/informal)', 'rideon-wp-translator' ),
+				'pros'     => __( 'Better context understanding, more natural translations', 'rideon-wp-translator' ),
+				'cons'     => __( 'Higher cost than 3.5', 'rideon-wp-translator' ),
+			),
+			'gpt-4o' => array(
+				'label'    => 'GPT-4o (Best quality)',
+				'cost'     => __( 'Medium-High', 'rideon-wp-translator' ),
+				'quality'  => __( 'Excellent', 'rideon-wp-translator' ),
+				'best_for' => __( 'Long texts, technical documents, professional translations, content with stylistic nuances', 'rideon-wp-translator' ),
+				'pros'     => __( 'Maximum accuracy, excellent tone handling, consistency on complex texts', 'rideon-wp-translator' ),
+				'cons'     => __( 'More expensive', 'rideon-wp-translator' ),
+			),
+		);
+	}
+
+	/**
+	 * Enqueue script to update model info dynamically
+	 */
+	private function enqueue_model_info_script() {
+		$models_info = $this->get_models_info();
+		?>
+		<script type="text/javascript">
+		(function($) {
+			var modelsInfo = <?php echo wp_json_encode( $models_info ); ?>;
+			
+			function updateModelInfo() {
+				var selectedModel = $('#rideon_translator_model').val();
+				var info = modelsInfo[selectedModel];
+				
+				if (!info) return;
+				
+				var html = '<strong>' + escapeHtml(info.label) + '</strong>' +
+					'<p>' +
+					'<strong><?php echo esc_js( __( 'Cost:', 'rideon-wp-translator' ) ); ?></strong> ' + escapeHtml(info.cost) + '<br>' +
+					'<strong><?php echo esc_js( __( 'Quality:', 'rideon-wp-translator' ) ); ?></strong> ' + escapeHtml(info.quality) + '<br>' +
+					'<strong><?php echo esc_js( __( 'Best for:', 'rideon-wp-translator' ) ); ?></strong> ' + escapeHtml(info.best_for) +
+					'</p>';
+				
+				if (info.pros) {
+					html += '<p>' +
+						'<strong><?php echo esc_js( __( 'Pros:', 'rideon-wp-translator' ) ); ?></strong> ' + escapeHtml(info.pros) +
+						'</p>';
+				}
+				
+				if (info.cons) {
+					html += '<p>' +
+						'<strong><?php echo esc_js( __( 'Cons:', 'rideon-wp-translator' ) ); ?></strong> ' + escapeHtml(info.cons) +
+						'</p>';
+				}
+				
+				$('#rideon_model_info').html(html);
+			}
+			
+			function escapeHtml(text) {
+				var map = {
+					'&': '&amp;',
+					'<': '&lt;',
+					'>': '&gt;',
+					'"': '&quot;',
+					"'": '&#039;'
+				};
+				return text.replace(/[&<>"']/g, function(m) { return map[m]; });
+			}
+			
+			$(document).ready(function() {
+				$('#rideon_translator_model').on('change', updateModelInfo);
+			});
+		})(jQuery);
+		</script>
 		<?php
 	}
 

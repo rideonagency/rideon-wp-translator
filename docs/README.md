@@ -22,8 +22,7 @@ RideOn WP Translator è un plugin WordPress che utilizza l'API di OpenAI per tra
 - **Traduzione Automatica**: Traduzione con un singolo click dal metabox nell'editor dei post
 - **Integrazione OpenAI**: Utilizza modelli GPT-3.5 Turbo e GPT-4 Turbo per traduzioni di alta qualità
 - **11 Lingue Supportate**: Italiano, Inglese, Spagnolo, Francese, Tedesco, Portoghese, Russo, Cinese, Giapponese, Coreano, Arabo
-- **Gestione Draft**: I post tradotti vengono creati come bozze per permettere la revisione prima della pubblicazione
-- **Collegamento Traduzioni**: I post originali e tradotti sono collegati tramite metadati per facilitare la gestione
+- **Traduzione In-Place**: Il contenuto viene tradotto direttamente nel post corrente
 - **Debug Logging**: Sistema opzionale di logging per il debug delle chiamate API
 - **Multisite**: Supporto per installazioni multisite (non network-enabled)
 
@@ -111,10 +110,9 @@ Il plugin **non è network-enabled**. Deve essere attivato individualmente per o
    - Il plugin mostrerà un indicatore di caricamento
    - La traduzione può richiedere alcuni secondi a seconda della lunghezza del contenuto
 
-4. **Revisiona e pubblica**
-   - Il post tradotto viene creato come bozza
-   - Vai su Post → Bozze per trovare il post tradotto
-   - Rivedi la traduzione e pubblica quando pronto
+4. **Salva il post**
+   - Il contenuto viene tradotto direttamente nel post corrente
+   - Rivedi la traduzione e salva quando pronto
 
 ### Cosa viene Tradotto
 
@@ -130,12 +128,6 @@ Il plugin **non è network-enabled**. Deve essere attivato individualmente per o
 - **Autore**: Lo stesso autore del post originale
 - **Tipo di post**: Mantiene lo stesso post type
 
-### Metadati di Collegamento
-
-Il plugin salva i seguenti metadati per collegare i post:
-
-- `_translation_of`: ID del post originale
-- `_translated_to`: Codice lingua della traduzione (es. `en`, `it`)
 
 ---
 
@@ -200,10 +192,10 @@ Cliente per le chiamate all'API OpenAI.
 Orchestratore del processo di traduzione.
 
 **Metodi principali:**
-- `translate_post($post_id, $target_lang, $source_lang)`: Traduce un intero post e crea un nuovo post
-- `get_translations($post_id, $target_lang, $source_lang)`: Ottiene solo le traduzioni senza creare un nuovo post
+- `translate_post($post_id, $target_lang, $source_lang)`: Traduce un intero post e crea un nuovo post con lo stesso status dell'originale
+- `get_translations($post_id, $target_lang, $source_lang)`: Ottiene solo le traduzioni senza creare un nuovo post (usato per traduzione in-place)
 - `extract_post_content($post)`: Estrae titolo, contenuto ed excerpt
-- `create_translated_post()`: Crea il post tradotto con tutti i metadati
+- `create_translated_post()`: Crea il post tradotto mantenendo lo stesso status del post originale
 
 #### `RideOn_Translator_Post_Handler`
 Gestisce il metabox e le richieste AJAX.
@@ -232,14 +224,14 @@ Gestisce il metabox e le richieste AJAX.
    - Esegue chiamata API a OpenAI
    - Gestisce errori e timeout
 
-5. **Translator crea nuovo post**
-   - Crea post come draft
-   - Copia categorie, tag, immagine in evidenza
-   - Salva metadati di collegamento
+5. **Translator aggiorna il post corrente**
+   - Aggiorna titolo, contenuto ed excerpt con le traduzioni
+   - Il post mantiene lo stesso status (pubblicato, bozza, ecc.)
 
 6. **Risposta AJAX**
-   - Restituisce ID del post creato e link di modifica
-   - JavaScript mostra messaggio di successo
+   - Restituisce le traduzioni (titolo, contenuto, excerpt)
+   - JavaScript aggiorna i campi del post corrente
+   - Mostra messaggio di successo
 
 ---
 
@@ -273,7 +265,7 @@ Il plugin non espone action hooks personalizzati al momento, ma utilizza gli hoo
 ### Funzioni Pubbliche
 
 #### `RideOn_Translator::translate_post()`
-Traduce un post e crea un nuovo post tradotto.
+Traduce un post e crea un nuovo post tradotto con lo stesso status del post originale.
 
 **Parametri:**
 - `$post_id` (int): ID del post da tradurre
@@ -283,6 +275,8 @@ Traduce un post e crea un nuovo post tradotto.
 **Ritorna:**
 - `int`: ID del post tradotto creato
 - `WP_Error`: In caso di errore
+
+**Nota**: Il nuovo post mantiene lo stesso status del post originale (pubblicato, bozza, ecc.) e non vengono creati metadati di collegamento.
 
 **Esempio:**
 ```php
@@ -325,10 +319,6 @@ Il plugin salva le seguenti opzioni:
 - `rideon_translator_default_target_lang`: Lingua target predefinita
 - `rideon_translator_enable_debug_log`: Abilitazione debug logging
 
-### Metadati dei Post
-
-- `_translation_of`: ID del post originale (solo per post tradotti)
-- `_translated_to`: Codice lingua della traduzione (solo per post tradotti)
 
 ---
 

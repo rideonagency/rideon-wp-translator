@@ -149,14 +149,10 @@ class RideOn_Translator {
 			'post_title'    => sanitize_text_field( $translated_content['title'] ),
 			'post_content'  => wp_kses_post( $translated_content['content'] ),
 			'post_excerpt'  => sanitize_textarea_field( $translated_content['excerpt'] ),
-			'post_status'   => 'draft', // Create as draft for review
+			'post_status'   => sanitize_text_field( $source_post->post_status ),
 			'post_type'     => sanitize_text_field( $source_post->post_type ),
 			'post_author'   => absint( $source_post->post_author ),
 			'post_category' => array_map( 'absint', wp_get_post_categories( $source_post->ID ) ),
-			'meta_input'    => array(
-				'_translation_of' => absint( $source_post->ID ),
-				'_translated_to'  => sanitize_text_field( $target_lang ),
-			),
 		);
 
 		// Copy tags
