@@ -98,14 +98,16 @@ class RideOn_Translator_OpenAI_Client {
 	 * @param string $source_lang Source language code
 	 * @param string $target_lang Target language code
 	 * @param bool   $is_content Whether this is post content (applies paragraph normalization)
+	 * @param bool   $is_slug Whether this is a slug (applies URL-friendly formatting)
 	 * @return array|WP_Error Response array with translated text or WP_Error on failure
 	 */
-	public function translate( $text, $source_lang, $target_lang, $is_content = false ) {
+	public function translate( $text, $source_lang, $target_lang, $is_content = false, $is_slug = false ) {
 		$this->log_debug( 'Translation request started', array(
 			'source_lang' => $source_lang,
 			'target_lang' => $target_lang,
 			'text_length' => strlen( $text ),
 			'is_content' => $is_content,
+			'is_slug' => $is_slug,
 		) );
 
 		// Log original text with visible line breaks for debugging
@@ -121,7 +123,7 @@ class RideOn_Translator_OpenAI_Client {
 			return new WP_Error( 'empty_text', __( 'Text to translate is empty.', 'rideon-wp-translator' ) );
 		}
 
-		$prompt = $this->build_translation_prompt( $text, $source_lang, $target_lang, $is_content );
+		$prompt = $this->build_translation_prompt( $text, $source_lang, $target_lang, $is_content, $is_slug );
 
 		// Log the prompt being sent
 		$this->log_text_debug( 'PROMPT BEING SENT TO API', $prompt );
@@ -164,11 +166,22 @@ class RideOn_Translator_OpenAI_Client {
 	 * @param string $source_lang Source language code
 	 * @param string $target_lang Target language code
 	 * @param bool   $is_content Whether this is post content (applies paragraph normalization)
+	 * @param bool   $is_slug Whether this is a slug (applies URL-friendly formatting)
 	 * @return string
 	 */
-	private function build_translation_prompt( $text, $source_lang, $target_lang, $is_content = false ) {
+	private function build_translation_prompt( $text, $source_lang, $target_lang, $is_content = false, $is_slug = false ) {
 		$source_lang_name = $this->get_language_name( $source_lang );
 		$target_lang_name = $this->get_language_name( $target_lang );
+
+		// Handle slug translation with special prompt
+		if ( $is_slug ) {
+			return sprintf(
+				'Translate the following text from %s to %s and convert it to a URL-friendly slug format.\n\nCRITICAL REQUIREMENTS:\n- Use lowercase letters only\n- Separate words with hyphens\n- Remove all special characters, accents, and punctuation\n- Maximum 50 characters\n- Return ONLY the slug, no explanations or additional text\n- Do not include any prefixes, suffixes, or metadata\n\nText to translate:\n%s',
+				$source_lang_name,
+				$target_lang_name,
+				sanitize_text_field( $text )
+			);
+		}
 
 		// Normalize content only if it's post content (not title or excerpt)
 		if ( $is_content ) {

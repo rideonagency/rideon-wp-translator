@@ -157,6 +157,42 @@
 		});
 
 		/**
+		 * Update slug field value (helper function for classic editor)
+		 * Directly updates the display span #editable-post-name
+		 */
+		function updateSlugField(slugValue) {
+			// Update the display span #editable-post-name directly
+			const $slugSpan = $('#editable-post-name');
+			if ($slugSpan.length) {
+				$slugSpan.text(slugValue);
+				
+				// Also update the full version if it exists
+				const $slugSpanFull = $('#editable-post-name-full');
+				if ($slugSpanFull.length) {
+					$slugSpanFull.text(slugValue);
+				}
+				
+				// Trigger change event on the span to notify WordPress
+				$slugSpan.trigger('change');
+			}
+			
+			// Also update the input field #post_name if it exists (might be hidden)
+			const $slugInput = $('#post_name');
+			if ($slugInput.length) {
+				$slugInput.val(slugValue);
+				$slugInput.trigger('input').trigger('change').trigger('blur');
+				
+				// Also trigger native events
+				if ($slugInput[0]) {
+					const inputEvent = new Event('input', { bubbles: true });
+					const changeEvent = new Event('change', { bubbles: true });
+					$slugInput[0].dispatchEvent(inputEvent);
+					$slugInput[0].dispatchEvent(changeEvent);
+				}
+			}
+		}
+
+		/**
 		 * Translate post content in-place (client-side update)
 		 */
 		function translateInPlace(postId, sourceLang, targetLang) {
@@ -179,6 +215,24 @@
 							$title.val(response.data.title);
 							// Trigger change event for WordPress
 							$title.trigger('input').trigger('change');
+						}
+
+						// Update slug if provided
+						if (response.data.slug) {
+							// For Gutenberg editor, update via data dispatch
+							if (typeof wp !== 'undefined' && wp.data && wp.data.dispatch) {
+								try {
+									const editorStore = wp.data.select('core/editor');
+									if (editorStore) {
+										wp.data.dispatch('core/editor').editPost({ slug: response.data.slug });
+									}
+								} catch (e) {
+									// Gutenberg editor not available, continue with classic editor approach
+								}
+							}
+							
+							// For classic editor, update the slug field and display span
+							updateSlugField(response.data.slug);
 						}
 
 						// Update content

@@ -58,6 +58,21 @@ class RideOn_Translator {
 			return $translated_title;
 		}
 
+		// Translate slug - generate from translated title using OpenAI
+		$translated_slug = '';
+		if ( ! empty( $translated_title ) ) {
+			$translated_slug_result = $this->translate_slug( $translated_title, $source_lang, $target_lang, $source_post->post_type );
+			if ( ! is_wp_error( $translated_slug_result ) && ! empty( $translated_slug_result ) ) {
+				$translated_slug = $translated_slug_result;
+			}
+		}
+		
+		// If slug translation failed or is empty, generate from translated title using WordPress sanitize_title
+		if ( empty( $translated_slug ) ) {
+			$translated_slug = sanitize_title( $translated_title );
+			$translated_slug = $this->ensure_unique_slug( $translated_slug, $source_post->post_type );
+		}
+
 		// Translate content
 		$translated_content = $this->translate_text( $content['content'], $source_lang, $target_lang );
 		if ( is_wp_error( $translated_content ) ) {
@@ -80,6 +95,7 @@ class RideOn_Translator {
 				'title'   => $translated_title,
 				'content' => $translated_content,
 				'excerpt' => $translated_excerpt,
+				'slug'    => $translated_slug,
 			),
 			$target_lang
 		);
@@ -98,10 +114,17 @@ class RideOn_Translator {
 	 * @return array
 	 */
 	private function extract_post_content( $post ) {
+		// Get slug, or generate from title if empty
+		$slug = $post->post_name;
+		if ( empty( $slug ) ) {
+			$slug = sanitize_title( $post->post_title );
+		}
+
 		return array(
 			'title'   => $post->post_title,
 			'content' => $post->post_content,
 			'excerpt' => $post->post_excerpt,
+			'slug'    => $slug,
 		);
 	}
 
@@ -149,6 +172,81 @@ class RideOn_Translator {
 	}
 
 	/**
+	 * Generate slug from translated title using OpenAI
+	 *
+	 * @param string $translated_title Translated title to convert to slug
+	 * @param string $source_lang Source language code (not used, kept for compatibility)
+	 * @param string $target_lang Target language code (not used, kept for compatibility)
+	 * @param string $post_type Post type for conflict checking
+	 * @param int    $exclude_id Post ID to exclude from conflict check
+	 * @return string|WP_Error Generated and sanitized slug
+	 */
+	private function translate_slug( $translated_title, $source_lang, $target_lang, $post_type = 'post', $exclude_id = 0 ) {
+		if ( empty( $translated_title ) ) {
+			return '';
+		}
+
+		// Sanitize language codes
+		$source_lang = sanitize_text_field( $source_lang );
+		$target_lang = sanitize_text_field( $target_lang );
+
+		// Generate slug from translated title using OpenAI with slug-specific prompt
+		// OpenAI will convert the translated title to a URL-friendly slug format
+		$response = $this->openai_client->translate( $translated_title, $source_lang, $target_lang, false, true );
+
+		if ( is_wp_error( $response ) ) {
+			// If translation fails, return empty to trigger fallback
+			return '';
+		}
+
+		if ( ! isset( $response['translated_text'] ) || empty( $response['translated_text'] ) ) {
+			// If translation is empty, return empty to trigger fallback
+			return '';
+		}
+
+		// Get translated slug text and sanitize it
+		$translated_slug_text = trim( $response['translated_text'] );
+		
+		// Remove any extra text that might have been returned (explanations, etc.)
+		// Take only the first line if multiple lines
+		$lines = explode( "\n", $translated_slug_text );
+		$translated_slug_text = trim( $lines[0] );
+
+		// Sanitize to URL-friendly format
+		// This will ensure proper slug format (lowercase, hyphens, etc.)
+		$sanitized_slug = sanitize_title( $translated_slug_text );
+
+		// Ensure slug is unique
+		$unique_slug = $this->ensure_unique_slug( $sanitized_slug, $post_type, $exclude_id );
+
+		return $unique_slug;
+	}
+
+	/**
+	 * Ensure slug is unique by checking for conflicts
+	 *
+	 * @param string $slug Slug to check
+	 * @param string $post_type Post type
+	 * @param int    $exclude_id Post ID to exclude from check
+	 * @return string Unique slug
+	 */
+	private function ensure_unique_slug( $slug, $post_type = 'post', $exclude_id = 0 ) {
+		$original_slug = $slug;
+		$counter = 1;
+
+		// Check if slug already exists
+		$existing_post = get_page_by_path( $slug, OBJECT, $post_type );
+		
+		while ( $existing_post && ( $exclude_id === 0 || $existing_post->ID !== $exclude_id ) ) {
+			$slug = $original_slug . '-' . $counter;
+			$existing_post = get_page_by_path( $slug, OBJECT, $post_type );
+			$counter++;
+		}
+
+		return $slug;
+	}
+
+	/**
 	 * Create translated post
 	 *
 	 * @param WP_Post $source_post Source post object
@@ -167,6 +265,11 @@ class RideOn_Translator {
 			'post_author'   => absint( $source_post->post_author ),
 			'post_category' => array_map( 'absint', wp_get_post_categories( $source_post->ID ) ),
 		);
+
+		// Add translated slug if provided
+		if ( ! empty( $translated_content['slug'] ) ) {
+			$post_data['post_name'] = sanitize_text_field( $translated_content['slug'] );
+		}
 
 		// Copy tags
 		$tags = wp_get_post_tags( $source_post->ID, array( 'fields' => 'names' ) );
@@ -220,6 +323,21 @@ class RideOn_Translator {
 			return $translated_title;
 		}
 
+		// Translate slug - generate from translated title using OpenAI
+		$translated_slug = '';
+		if ( ! empty( $translated_title ) ) {
+			$translated_slug_result = $this->translate_slug( $translated_title, $source_lang, $target_lang, $source_post->post_type, $source_post->ID );
+			if ( ! is_wp_error( $translated_slug_result ) && ! empty( $translated_slug_result ) ) {
+				$translated_slug = $translated_slug_result;
+			}
+		}
+		
+		// If slug translation failed or is empty, generate from translated title using WordPress sanitize_title
+		if ( empty( $translated_slug ) ) {
+			$translated_slug = sanitize_title( $translated_title );
+			$translated_slug = $this->ensure_unique_slug( $translated_slug, $source_post->post_type, $source_post->ID );
+		}
+
 		// Translate content (with normalization for paragraph preservation)
 		$translated_content = $this->translate_text( $content['content'], $source_lang, $target_lang, true );
 		if ( is_wp_error( $translated_content ) ) {
@@ -239,6 +357,7 @@ class RideOn_Translator {
 			'title'   => $translated_title,
 			'content' => $translated_content,
 			'excerpt' => $translated_excerpt,
+			'slug'    => $translated_slug,
 		);
 
 		// Log debug info if enabled
@@ -247,8 +366,10 @@ class RideOn_Translator {
 				'title_length'   => strlen( $result['title'] ),
 				'content_length' => strlen( $result['content'] ),
 				'excerpt_length' => strlen( $result['excerpt'] ),
+				'slug_length'   => strlen( $result['slug'] ),
 				'title_preview'  => substr( $result['title'], 0, 50 ),
 				'content_preview' => substr( $result['content'], 0, 100 ),
+				'slug_preview'   => $result['slug'],
 			) ) );
 		}
 

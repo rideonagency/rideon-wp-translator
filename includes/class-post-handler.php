@@ -190,6 +190,7 @@ class RideOn_Translator_Post_Handler {
 				'title'   => $result['title'],
 				'content' => $result['content'],
 				'excerpt' => $result['excerpt'],
+				'slug'    => isset( $result['slug'] ) ? $result['slug'] : '',
 			)
 		);
 	}
