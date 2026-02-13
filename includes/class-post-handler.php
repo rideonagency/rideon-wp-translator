@@ -41,7 +41,6 @@ class RideOn_Translator_Post_Handler {
 		add_action( 'add_meta_boxes', array( $this, 'add_translation_metabox' ) );
 		add_action( 'wp_ajax_rideon_translate_post', array( $this, 'handle_ajax_translation' ) );
 		add_action( 'wp_ajax_rideon_get_translations', array( $this, 'handle_ajax_get_translations' ) );
-		add_action( 'wp_ajax_rideon_update_slug', array( $this, 'handle_ajax_update_slug' ) );
 	}
 
 	/**
@@ -194,93 +193,5 @@ class RideOn_Translator_Post_Handler {
 				'slug'    => isset( $result['slug'] ) ? $result['slug'] : '',
 			)
 		);
-	}
-
-	/**
-	 * Handle AJAX request to update post slug directly in database
-	 * This bypasses the UI and updates the slug programmatically
-	 *
-	 * @return void
-	 */
-	public function handle_ajax_update_slug() {
-		// Verify nonce
-		if ( ! isset( $_POST['nonce'] ) || ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['nonce'] ) ), 'rideon_translator_nonce' ) ) {
-			wp_send_json_error( array( 'message' => __( 'Security check failed.', 'rideon-wp-translator' ) ) );
-		}
-
-		// Check user capability
-		if ( ! current_user_can( 'edit_posts' ) ) {
-			wp_send_json_error( array( 'message' => __( 'You do not have permission to edit posts.', 'rideon-wp-translator' ) ) );
-		}
-
-		// Get parameters
-		$post_id = isset( $_POST['post_id'] ) ? intval( $_POST['post_id'] ) : 0;
-		$slug    = isset( $_POST['slug'] ) ? sanitize_text_field( wp_unslash( $_POST['slug'] ) ) : '';
-
-		if ( empty( $post_id ) || empty( $slug ) ) {
-			wp_send_json_error( array( 'message' => __( 'Invalid parameters.', 'rideon-wp-translator' ) ) );
-		}
-
-		// Check if post exists
-		$post = get_post( $post_id );
-		if ( ! $post ) {
-			wp_send_json_error( array( 'message' => __( 'Post not found.', 'rideon-wp-translator' ) ) );
-		}
-
-		// Check user can edit this post
-		if ( ! current_user_can( 'edit_post', $post_id ) ) {
-			wp_send_json_error( array( 'message' => __( 'You do not have permission to edit this post.', 'rideon-wp-translator' ) ) );
-		}
-
-		// Sanitize slug
-		$slug = sanitize_title( $slug );
-
-		// Ensure slug is unique
-		$unique_slug = $this->ensure_unique_slug( $slug, $post->post_type, $post_id );
-
-		// Update post slug using wp_update_post
-		// Use wp_update_post with validation enabled
-		$update_result = wp_update_post(
-			array(
-				'ID'        => $post_id,
-				'post_name' => $unique_slug,
-			),
-			true
-		);
-
-		if ( is_wp_error( $update_result ) ) {
-			wp_send_json_error( array( 'message' => $update_result->get_error_message() ) );
-		}
-
-		wp_send_json_success(
-			array(
-				'message' => __( 'Slug updated successfully.', 'rideon-wp-translator' ),
-				'slug'    => $unique_slug,
-			)
-		);
-	}
-
-	/**
-	 * Ensure unique slug (helper method)
-	 *
-	 * @param string $slug Slug to check
-	 * @param string $post_type Post type
-	 * @param int    $exclude_id Post ID to exclude from check
-	 * @return string Unique slug
-	 */
-	private function ensure_unique_slug( $slug, $post_type = 'post', $exclude_id = 0 ) {
-		$original_slug = $slug;
-		$counter       = 1;
-
-		// Check if slug already exists
-		$existing_post = get_page_by_path( $slug, OBJECT, $post_type );
-
-		while ( $existing_post && ( $exclude_id === 0 || $existing_post->ID !== $exclude_id ) ) {
-			$slug          = $original_slug . '-' . $counter;
-			$existing_post = get_page_by_path( $slug, OBJECT, $post_type );
-			$counter++;
-		}
-
-		return $slug;
 	}
 }
