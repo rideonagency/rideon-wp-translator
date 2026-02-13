@@ -145,6 +145,15 @@ class RideOn_Translator_Admin {
 	 * @return string Encrypted API key
 	 */
 	public function sanitize_api_key( $api_key ) {
+		$stored_key = get_option( 'rideon_translator_api_key' );
+		
+		// If field is empty and a key already exists, keep the existing key
+		// This prevents overwriting the key when user leaves the field blank
+		if ( empty( $api_key ) && ! empty( $stored_key ) ) {
+			return $stored_key;
+		}
+		
+		// If field is empty and no key exists, return empty string
 		if ( empty( $api_key ) ) {
 			return '';
 		}
@@ -168,7 +177,6 @@ class RideOn_Translator_Admin {
 		
 		// If input doesn't match either pattern, check if it matches stored value
 		// This handles edge cases where the field wasn't changed
-		$stored_key = get_option( 'rideon_translator_api_key' );
 		if ( ! empty( $stored_key ) && $stored_key === $api_key ) {
 			// User didn't change the field, keep the stored encoded value
 			return $api_key;
@@ -248,17 +256,24 @@ class RideOn_Translator_Admin {
 	 */
 	public function render_api_key_field() {
 		$api_key = get_option( 'rideon_translator_api_key' );
-		$decrypted_key = $api_key ? base64_decode( $api_key ) : '';
+		$has_key = ! empty( $api_key );
 		?>
 		<input type="password" 
 		       id="rideon_translator_api_key" 
 		       name="rideon_translator_api_key" 
-		       value="<?php echo esc_attr( $decrypted_key ); ?>" 
+		       value="" 
 		       class="regular-text" 
-		       placeholder="sk-..." />
-		<p class="description">
-			<?php esc_html_e( 'Your OpenAI API key. Keep this secure and never share it publicly.', 'rideon-wp-translator' ); ?>
-		</p>
+		       placeholder="<?php echo esc_attr( $has_key ? __( 'API key is set (leave blank to keep current)', 'rideon-wp-translator' ) : 'sk-...' ); ?>" />
+		<?php if ( $has_key ) : ?>
+			<p class="description" style="color: #46b450; margin-top: 5px;">
+				<strong><?php esc_html_e( '✓ API key is configured', 'rideon-wp-translator' ); ?></strong><br>
+				<?php esc_html_e( 'Leave the field blank to keep the current key. Enter a new key to update it.', 'rideon-wp-translator' ); ?>
+			</p>
+		<?php else : ?>
+			<p class="description">
+				<?php esc_html_e( 'Your OpenAI API key. Keep this secure and never share it publicly.', 'rideon-wp-translator' ); ?>
+			</p>
+		<?php endif; ?>
 		<?php
 	}
 
