@@ -169,14 +169,24 @@ class RideOn_Translator
 
 		$sanitized_result = wp_kses_post($response['translated_text']);
 
-		// BUG FIX: If original text didn't end with a period, but translation does, remove it
-		// This is specific to titles and excerpts (non-content fields)
+		// Preserve trailing punctuation for titles and excerpts (non-content fields)
 		if (!$is_content && !empty($text)) {
 			$trimmed_source = trim($text);
 			$trimmed_result = trim($sanitized_result);
 			if (!empty($trimmed_source) && !empty($trimmed_result)) {
-				if (substr($trimmed_source, -1) !== '.' && substr($trimmed_result, -1) === '.') {
+				$source_last = substr($trimmed_source, -1);
+				$result_last = substr($trimmed_result, -1);
+				// If original didn't end with a period but translation does, remove it
+				if ($source_last !== '.' && $result_last === '.') {
 					$sanitized_result = rtrim($trimmed_result, '.');
+					$trimmed_result = trim($sanitized_result);
+					$result_last = $trimmed_result !== '' ? substr($trimmed_result, -1) : '';
+				}
+				// If original is a question or exclamation, translation must end with the same punctuation
+				if ($source_last === '?' || $source_last === '!') {
+					if ($result_last !== $source_last) {
+						$sanitized_result = rtrim($trimmed_result, '.?!') . $source_last;
+					}
 				}
 			}
 		}

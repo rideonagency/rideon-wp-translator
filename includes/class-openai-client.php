@@ -231,7 +231,7 @@ class RideOn_Translator_OpenAI_Client
 			} else {
 				// For title/excerpt, simple translation
 				return sprintf(
-					"Translate the following text from %s to %s.\n\nCRITICAL INSTRUCTIONS:\n- Maintain the exact same tone, style, and formatting\n- IMPORTANT: Do not add a trailing period (full stop) if the source text does not have one\n- If the source text ends without punctuation, the translation must also end without punctuation\n- Return ONLY the translated text without any additional explanations or notes.\n\nText to translate:\n%s",
+					"Translate the following text from %s to %s.\n\nCRITICAL INSTRUCTIONS:\n- Maintain the exact same tone, style, and formatting\n- IMPORTANT: Preserve the type of sentence. If the source ends with a question mark (?), the translation MUST end with a question mark. If it ends with an exclamation mark (!), the translation MUST end with an exclamation mark. Do not add a trailing period if the source has no period.\n- If the source text ends without punctuation, the translation must also end without punctuation\n- Return ONLY the translated text without any additional explanations or notes.\n\nText to translate:\n%s",
 					$source_lang_name,
 					$target_lang_name,
 					$sanitized_text
