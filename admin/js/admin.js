@@ -193,6 +193,61 @@
 		}
 
 		/**
+		 * Log to console only when plugin debug is enabled (Settings > Ride On Translator > Enable Debug Logging)
+		 */
+		function debugLog() {
+			if (typeof rideonTranslator !== 'undefined' && rideonTranslator.debug) {
+				console.log.apply(console, ['[RideOn Translator]'].concat(Array.prototype.slice.call(arguments)));
+			}
+		}
+
+		/**
+		 * Log content stats to console for debugging (prefix: [RideOn Translator]). Only when debug is enabled.
+		 *
+		 * @param {string} label - Log label
+		 * @param {string} html - HTML string to inspect
+		 */
+		function logContentDebug(label, html) {
+			if (typeof rideonTranslator === 'undefined' || !rideonTranslator.debug) {
+				return;
+			}
+			if (typeof html !== 'string') {
+				debugLog(label, 'not a string:', typeof html);
+				return;
+			}
+			const singleNl = (html.match(/\n/g) || []).length;
+			const doubleNl = (html.match(/\n\n/g) || []).length;
+			const nbspCount = (html.match(/&nbsp;/gi) || []).length;
+			const preview = html.slice(0, 500).replace(/\n/g, '\\n\n').replace(/\r/g, '\\r');
+			debugLog(label, '| length:', html.length, '| \\n:', singleNl, '| \\n\\n:', doubleNl, '| &nbsp;:', nbspCount);
+			debugLog(label, 'preview (newlines as \\n):', preview);
+		}
+
+		/**
+		 * Normalize translated HTML to avoid Gutenberg creating extra blank lines and &nbsp; in code view.
+		 * Removes empty paragraphs and standalone &nbsp; between tags.
+		 *
+		 * @param {string} html - Raw HTML from translation API
+		 * @returns {string} Normalized HTML
+		 */
+		function normalizeTranslatedContent(html) {
+			if (!html || typeof html !== 'string') {
+				return html;
+			}
+			logContentDebug('BEFORE normalizeTranslatedContent', html);
+			let content = html;
+			// Remove paragraphs that are empty or contain only &nbsp; / whitespace (avoids empty blocks in Gutenberg)
+			content = content.replace(/<p>\s*&nbsp;\s*<\/p>/gi, '');
+			content = content.replace(/<p>\s*<\/p>/g, '');
+			// Remove standalone &nbsp; (and surrounding whitespace) between tags
+			content = content.replace(/>\s*&nbsp;\s*</g, '><');
+			// Remove whitespace between tags so the block editor does not treat it as empty lines
+			content = content.replace(/>\s+</g, '><');
+			logContentDebug('AFTER normalizeTranslatedContent', content);
+			return content;
+		}
+
+		/**
 		 * Translate post content in-place (client-side update)
 		 */
 		function translateInPlace(postId, sourceLang, targetLang) {
@@ -209,6 +264,9 @@
 				success: function (response) {
 
 					if (response.success) {
+						// Debug: raw content received from API
+						logContentDebug('API response.data.content (raw)', response.data.content);
+
 						// Update title
 						const $title = $('#title');
 						if ($title.length) {
@@ -235,8 +293,10 @@
 							updateSlugField(response.data.slug);
 						}
 
-						// Update content
-						updatePostContent(response.data.content);
+						// Update content (normalize to prevent Gutenberg from adding &nbsp; and extra blank lines)
+						const normalizedContent = normalizeTranslatedContent(response.data.content);
+						debugLog('Passing to updatePostContent, length:', normalizedContent.length);
+						updatePostContent(normalizedContent);
 
 						// Update excerpt
 						const $excerpt = $('#excerpt');
@@ -272,19 +332,40 @@
 		 */
 		function updatePostContent(content) {
 			if (!content || content.trim() === '') {
+				debugLog('updatePostContent: skipped (empty content)');
 				return;
 			}
+			debugLog('updatePostContent: content length', content.length, '| &nbsp; count:', (content.match(/&nbsp;/gi) || []).length);
 
 			// Function to update TinyMCE editor content
+			// TinyMCE may add &nbsp; when parsing; we re-read and re-set cleaned content if needed
 			function updateTinyMCE(editor) {
 				try {
 					editor.setContent(content, { format: 'raw' });
+					const afterSet = editor.getContent({ format: 'raw' });
+					const nbspAfter = (afterSet.match(/&nbsp;/gi) || []).length;
+					const lenDiff = afterSet.length - content.length;
+					debugLog('TinyMCE getContent after setContent | length:', afterSet.length, '| &nbsp; count:', nbspAfter, '| length diff:', lenDiff);
+					logContentDebug('TinyMCE getContent (raw)', afterSet);
+					// Re-set if TinyMCE changed content (added &nbsp;, extra whitespace, or other chars)
+					if (nbspAfter > 0 || lenDiff !== 0) {
+						const cleaned = normalizeTranslatedContent(afterSet);
+						editor.setContent(cleaned, { format: 'raw' });
+						debugLog('TinyMCE: re-set cleaned content, length:', cleaned.length);
+						// Keep textarea in sync with cleaned content
+						const $content = $('#content');
+						if ($content.length) {
+							$content.val(cleaned);
+							$content.trigger('input').trigger('change');
+						}
+					}
 					editor.fire('change');
 					editor.fire('input');
 					editor.nodeChanged();
+					debugLog('updatePostContent: updated TinyMCE, content length', content.length);
 					return true;
 				} catch (e) {
-					console.error('Error updating TinyMCE content:', e);
+					console.error('[RideOn Translator] Error updating TinyMCE content:', e);
 					return false;
 				}
 			}
@@ -295,6 +376,7 @@
 				if ($content.length) {
 					$content.val(content);
 					$content.trigger('input').trigger('change');
+					debugLog('updatePostContent: updated textarea, content length', content.length);
 					return true;
 				}
 				return false;
@@ -307,10 +389,12 @@
 						const editorStore = wp.data.select('core/editor');
 						if (editorStore) {
 							wp.data.dispatch('core/editor').editPost({ content: content });
+							debugLog('updatePostContent: updated Gutenberg (editPost), content length', content.length);
 							return true;
 						}
 					} catch (e) {
 						// Gutenberg editor not available, ignore
+						debugLog('updatePostContent: Gutenberg not available or error', e);
 					}
 				}
 				return false;

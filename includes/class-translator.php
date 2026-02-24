@@ -196,6 +196,17 @@ class RideOn_Translator
 			$this->log_text_after_sanitize($sanitized_result);
 		}
 
+		// Normalize post content to prevent Gutenberg from creating extra blank lines and &nbsp;
+		if ($is_content) {
+			// Collapse multiple newlines to single newline
+			$sanitized_result = preg_replace('/\n{2,}/', "\n", $sanitized_result);
+			// Remove standalone &nbsp; (and surrounding whitespace) between tags first
+			$sanitized_result = preg_replace('/>\s*&nbsp;\s*</', '><', $sanitized_result);
+			// Remove all remaining whitespace between HTML tags so the editor
+			// does not treat them as empty lines and fill them with &nbsp;
+			$sanitized_result = preg_replace('/>\s+</', '><', $sanitized_result);
+		}
+
 		return $sanitized_result;
 	}
 
