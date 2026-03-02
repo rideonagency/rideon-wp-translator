@@ -128,6 +128,7 @@ class RideOn_WP_Translator {
 			array(
 				'ajaxUrl' => admin_url( 'admin-ajax.php' ),
 				'nonce'   => wp_create_nonce( 'rideon_translator_nonce' ),
+				'debug'   => (bool) get_option( 'rideon_translator_enable_debug_log', false ),
 				'i18n'    => array(
 					'translating' => __( 'Translating...', 'rideon-wp-translator' ),
 					'success'     => __( 'Translation completed successfully!', 'rideon-wp-translator' ),
