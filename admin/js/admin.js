@@ -224,8 +224,7 @@
 		}
 
 		/**
-		 * Normalize translated HTML to avoid Gutenberg creating extra blank lines and &nbsp; in code view.
-		 * Removes empty paragraphs and standalone &nbsp; between tags.
+		 * Normalize translated HTML by removing empty paragraphs containing only &nbsp;.
 		 *
 		 * @param {string} html - Raw HTML from translation API
 		 * @returns {string} Normalized HTML
@@ -234,17 +233,8 @@
 			if (!html || typeof html !== 'string') {
 				return html;
 			}
-			logContentDebug('BEFORE normalizeTranslatedContent', html);
-			let content = html;
-			// Remove paragraphs that are empty or contain only &nbsp; / whitespace (avoids empty blocks in Gutenberg)
-			content = content.replace(/<p>\s*&nbsp;\s*<\/p>/gi, '');
-			content = content.replace(/<p>\s*<\/p>/g, '');
-			// Remove standalone &nbsp; (and surrounding whitespace) between tags
-			content = content.replace(/>\s*&nbsp;\s*</g, '><');
-			// Remove whitespace between tags so the block editor does not treat it as empty lines
-			content = content.replace(/>\s+</g, '><');
-			logContentDebug('AFTER normalizeTranslatedContent', content);
-			return content;
+			// Remove empty paragraphs containing only &nbsp; or whitespace
+			return html.replace(/<p>\s*(&nbsp;\s*)*<\/p>/gi, '');
 		}
 
 		/**
@@ -338,27 +328,9 @@
 			debugLog('updatePostContent: content length', content.length, '| &nbsp; count:', (content.match(/&nbsp;/gi) || []).length);
 
 			// Function to update TinyMCE editor content
-			// TinyMCE may add &nbsp; when parsing; we re-read and re-set cleaned content if needed
 			function updateTinyMCE(editor) {
 				try {
 					editor.setContent(content, { format: 'raw' });
-					const afterSet = editor.getContent({ format: 'raw' });
-					const nbspAfter = (afterSet.match(/&nbsp;/gi) || []).length;
-					const lenDiff = afterSet.length - content.length;
-					debugLog('TinyMCE getContent after setContent | length:', afterSet.length, '| &nbsp; count:', nbspAfter, '| length diff:', lenDiff);
-					logContentDebug('TinyMCE getContent (raw)', afterSet);
-					// Re-set if TinyMCE changed content (added &nbsp;, extra whitespace, or other chars)
-					if (nbspAfter > 0 || lenDiff !== 0) {
-						const cleaned = normalizeTranslatedContent(afterSet);
-						editor.setContent(cleaned, { format: 'raw' });
-						debugLog('TinyMCE: re-set cleaned content, length:', cleaned.length);
-						// Keep textarea in sync with cleaned content
-						const $content = $('#content');
-						if ($content.length) {
-							$content.val(cleaned);
-							$content.trigger('input').trigger('change');
-						}
-					}
 					editor.fire('change');
 					editor.fire('input');
 					editor.nodeChanged();
