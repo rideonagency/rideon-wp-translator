@@ -77,7 +77,7 @@ class RideOn_Translator
 		}
 
 		// Translate content
-		$translated_content = $this->translate_text($content['content'], $source_lang, $target_lang);
+		$translated_content = $this->translate_text($content['content'], $source_lang, $target_lang, true);
 		if (is_wp_error($translated_content)) {
 			return $translated_content;
 		}

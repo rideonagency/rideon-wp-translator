@@ -107,6 +107,15 @@ class RideOn_Translator_Post_Handler {
 		$source_lang = isset( $_POST['source_lang'] ) ? sanitize_text_field( wp_unslash( $_POST['source_lang'] ) ) : '';
 		$target_lang = isset( $_POST['target_lang'] ) ? sanitize_text_field( wp_unslash( $_POST['target_lang'] ) ) : '';
 
+		// Validate languages against allowed list
+		$allowed_langs = array( 'it', 'en', 'es' );
+		if ( ! empty( $source_lang ) && ! in_array( $source_lang, $allowed_langs, true ) ) {
+			wp_send_json_error( array( 'message' => __( 'Invalid source language.', 'rideon-wp-translator' ) ) );
+		}
+		if ( ! empty( $target_lang ) && ! in_array( $target_lang, $allowed_langs, true ) ) {
+			wp_send_json_error( array( 'message' => __( 'Invalid target language.', 'rideon-wp-translator' ) ) );
+		}
+
 		if ( empty( $post_id ) || empty( $target_lang ) ) {
 			wp_send_json_error( array( 'message' => __( 'Invalid parameters.', 'rideon-wp-translator' ) ) );
 		}
@@ -161,6 +170,15 @@ class RideOn_Translator_Post_Handler {
 		$post_id     = isset( $_POST['post_id'] ) ? intval( $_POST['post_id'] ) : 0;
 		$source_lang = isset( $_POST['source_lang'] ) ? sanitize_text_field( wp_unslash( $_POST['source_lang'] ) ) : '';
 		$target_lang = isset( $_POST['target_lang'] ) ? sanitize_text_field( wp_unslash( $_POST['target_lang'] ) ) : '';
+
+		// Validate languages against allowed list
+		$allowed_langs = array( 'it', 'en', 'es' );
+		if ( ! empty( $source_lang ) && ! in_array( $source_lang, $allowed_langs, true ) ) {
+			wp_send_json_error( array( 'message' => __( 'Invalid source language.', 'rideon-wp-translator' ) ) );
+		}
+		if ( ! empty( $target_lang ) && ! in_array( $target_lang, $allowed_langs, true ) ) {
+			wp_send_json_error( array( 'message' => __( 'Invalid target language.', 'rideon-wp-translator' ) ) );
+		}
 
 		if ( empty( $post_id ) || empty( $target_lang ) ) {
 			wp_send_json_error( array( 'message' => __( 'Invalid parameters.', 'rideon-wp-translator' ) ) );
