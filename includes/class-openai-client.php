@@ -190,7 +190,6 @@ class RideOn_Translator_OpenAI_Client
 
 		// Normalize content only if it's post content (not title or excerpt)
 		if ($is_content) {
-			// Normalize content: convert plain text paragraphs to HTML for better preservation
 			$normalized_text = $this->normalize_content_for_translation($text);
 			$this->log_text_debug('TEXT AFTER NORMALIZATION', $normalized_text);
 		} else {
@@ -198,13 +197,12 @@ class RideOn_Translator_OpenAI_Client
 			$normalized_text = $text;
 		}
 
-		// Sanitize the text content to remove potentially dangerous HTML while preserving formatting
-		// Use wp_kses_post to allow safe HTML tags (p, strong, em, br, etc.) while removing dangerous ones
-		$sanitized_text = wp_kses_post($normalized_text);
-		$this->log_text_debug('TEXT AFTER SANITIZATION (wp_kses_post)', $sanitized_text);
+		// Content from WordPress DB is already sanitized on save.
+		// No need to sanitize again before sending to the API.
+		// The API response will be sanitized with wp_kses_post() in class-translator.php.
 
 		// Check if text contains HTML tags
-		$contains_html = $this->contains_html($sanitized_text);
+		$contains_html = $this->contains_html($normalized_text);
 		$this->log_debug('Content analysis', array(
 			'contains_html' => $contains_html,
 			'is_content' => $is_content,
@@ -216,7 +214,7 @@ class RideOn_Translator_OpenAI_Client
 				'Translate the following HTML content from %s to %s.\n\nCRITICAL INSTRUCTIONS:\n- Preserve ALL HTML tags, attributes, and structure exactly as they are\n- Only translate the text content inside the tags, not the tags themselves\n- CRITICAL: Preserve blank lines (empty lines) between HTML blocks exactly as they appear\n- If there is a blank line between two HTML blocks, keep that blank line in the translation\n- Preserve paragraph breaks: keep <p> tags and double line breaks between paragraphs\n- Maintain the same tone, style, and formatting\n- Do not modify, remove, or add any HTML tags\n- Do NOT remove blank lines that exist between paragraphs\n- Return only the translated HTML without any additional explanations or notes\n\n%s',
 				$source_lang_name,
 				$target_lang_name,
-				$sanitized_text
+				$normalized_text
 			);
 		} else {
 			// Plain text translation prompt
@@ -226,7 +224,7 @@ class RideOn_Translator_OpenAI_Client
 					'Translate the following text from %s to %s.\n\nCRITICAL INSTRUCTIONS FOR PARAGRAPH PRESERVATION:\n- You MUST preserve the exact paragraph structure\n- Where you see TWO consecutive line breaks (blank line), keep TWO consecutive line breaks in the translation\n- Do NOT merge paragraphs that are separated by blank lines\n- Do NOT add extra line breaks where there are none\n- Maintain the same tone, style, and formatting\n- Return ONLY the translated text without any additional explanations or notes\n\nText to translate:\n%s',
 					$source_lang_name,
 					$target_lang_name,
-					$sanitized_text
+					$normalized_text
 				);
 			} else {
 				// For title/excerpt, simple translation
@@ -234,70 +232,32 @@ class RideOn_Translator_OpenAI_Client
 					"Translate the following text from %s to %s.\n\nCRITICAL INSTRUCTIONS:\n- Maintain the exact same tone, style, and formatting\n- IMPORTANT: Preserve the type of sentence. If the source ends with a question mark (?), the translation MUST end with a question mark. If it ends with an exclamation mark (!), the translation MUST end with an exclamation mark. Do not add a trailing period if the source has no period.\n- If the source text ends without punctuation, the translation must also end without punctuation\n- Return ONLY the translated text without any additional explanations or notes.\n\nText to translate:\n%s",
 					$source_lang_name,
 					$target_lang_name,
-					$sanitized_text
+					$normalized_text
 				);
 			}
 		}
 	}
 
 	/**
-	 * Normalize content for translation to ensure paragraph structure is preserved
-	 * For both plain text and HTML: ensures line breaks and blank lines are preserved
+	 * Normalize content for translation
+	 *
+	 * Only normalizes line breaks to Unix format. The content from WordPress DB
+	 * is already well-structured (HTML with <p> tags or Gutenberg blocks) and
+	 * should not be manipulated further before sending to the API.
 	 *
 	 * @param string $text Text to normalize
 	 * @return string Normalized text
 	 */
 	private function normalize_content_for_translation($text)
 	{
-		// First, normalize Windows line breaks (\r\n) to Unix (\n)
-		// This handles cases like \r\n\n (Windows line break + blank line)
+		// Normalize Windows line breaks (\r\n) to Unix (\n)
 		$text = str_replace("\r\n", "\n", $text);
 
-		// Then normalize Mac line breaks (\r) to Unix (\n)
+		// Normalize old Mac line breaks (\r) to Unix (\n)
 		$text = str_replace("\r", "\n", $text);
 
-		// Normalize blank lines: convert patterns like \n[spaces/tabs]\n to \n\n
-		// This preserves paragraph breaks while normalizing whitespace
-		$text = preg_replace('/\n[ \t]+\n/', "\n\n", $text);
-
-		// For HTML content: convert double line breaks to <p> tags for better preservation
-		// This ensures paragraph structure is explicit and preserved by the API
-		if ($this->contains_html($text)) {
-			// Split by double line breaks to identify paragraphs
-			$paragraphs = preg_split('/\n\s*\n/', $text);
-
-			// Filter out empty paragraphs
-			$paragraphs = array_filter($paragraphs, function ($para) {
-				return trim($para) !== '';
-			});
-
-			// If we have multiple paragraphs, wrap them in <p> tags
-			if (count($paragraphs) > 1) {
-				$wrapped_paragraphs = array();
-				foreach ($paragraphs as $para) {
-					$trimmed = trim($para);
-					if (!empty($trimmed)) {
-						// Preserve single line breaks within paragraphs as <br>
-						$trimmed = nl2br($trimmed, false);
-						$wrapped_paragraphs[] = '<p>' . $trimmed . '</p>';
-					}
-				}
-				$text = implode("\n\n", $wrapped_paragraphs);
-			} elseif (count($paragraphs) === 1) {
-				// Single paragraph: wrap in <p> tag
-				$first_para = trim(reset($paragraphs));
-				if (!empty($first_para)) {
-					$first_para = nl2br($first_para, false);
-					$text = '<p>' . $first_para . '</p>';
-				}
-			}
-
-			// Ensure we don't have more than 2 consecutive newlines
-			$text = preg_replace('/\n{3,}/', "\n\n", $text);
-		} else {
-			// For plain text: ensure double line breaks are preserved
-			$text = preg_replace('/\n{3,}/', "\n\n", $text);
-		}
+		// Collapse 3+ consecutive newlines to double newline
+		$text = preg_replace('/\n{3,}/', "\n\n", $text);
 
 		return $text;
 	}
