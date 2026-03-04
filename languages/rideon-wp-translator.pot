@@ -2,7 +2,7 @@
 # This file is distributed under the same license as the RideOn WP Translator plugin.
 msgid ""
 msgstr ""
-"Project-Id-Version: RideOn WP Translator 1.0.0\n"
+"Project-Id-Version: RideOn WP Translator 1.0.1\n"
 "Report-Msgid-Bugs-To: https://github.com/rideon-wp-translator\n"
 "POT-Creation-Date: 2025-02-11 12:00+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
@@ -132,6 +132,12 @@ msgid "Translate to:"
 msgstr ""
 
 msgid "Select language..."
+msgstr ""
+
+msgid "Invalid source language."
+msgstr ""
+
+msgid "Invalid target language."
 msgstr ""
 
 msgid "Security check failed."

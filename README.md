@@ -9,7 +9,7 @@ Plugin che integra OpenAI GPT per tradurre automaticamente i contenuti WordPress
 ## Caratteristiche
 
 - Traduzione automatica con un click
-- Supporto per 11 lingue (IT, EN, ES, FR, DE, PT, RU, ZH, JA, KO, AR)
+- Supporto per 3 lingue (IT, EN, ES)
 - Modelli GPT-3.5 Turbo e GPT-4 Turbo
 - Traduzione in-place nel post corrente
 - Debug logging opzionale

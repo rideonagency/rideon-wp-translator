@@ -21,7 +21,7 @@ RideOn WP Translator è un plugin WordPress che utilizza l'API di OpenAI per tra
 
 - **Traduzione Automatica**: Traduzione con un singolo click dal metabox nell'editor dei post
 - **Integrazione OpenAI**: Utilizza modelli GPT-3.5 Turbo e GPT-4 Turbo per traduzioni di alta qualità
-- **11 Lingue Supportate**: Italiano, Inglese, Spagnolo, Francese, Tedesco, Portoghese, Russo, Cinese, Giapponese, Coreano, Arabo
+- **3 Lingue Supportate**: Italiano, Inglese, Spagnolo
 - **Traduzione In-Place**: Il contenuto viene tradotto direttamente nel post corrente
 - **Debug Logging**: Sistema opzionale di logging per il debug delle chiamate API
 - **Multisite**: Supporto per installazioni multisite (non network-enabled)
@@ -489,6 +489,11 @@ Per problemi o domande:
 ---
 
 ## Changelog
+
+### Versione 1.0.1
+- Fix: aggiunta validazione whitelist lingue negli handler AJAX (prevenzione prompt injection)
+- Fix: `is_content=true` ora passato correttamente in `translate_post()` per preservare i paragrafi
+- Lingue supportate ridotte a 3 (IT, EN, ES)
 
 ### Versione 1.0.0
 - Release iniziale
