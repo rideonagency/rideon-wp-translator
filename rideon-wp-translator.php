@@ -3,7 +3,7 @@
  * Plugin Name: Ride On WP Translator
  * Plugin URI: https://rideonagency.com/
  * Description: Translate WordPress posts automatically from one language to another using OpenAI API.
- * Version: 1.0.0
+ * Version: 1.0.1
  * Author: Ride On Agency
  * Author URI: https://rideonagency.com/
  * License: GPL v2 or later
@@ -21,7 +21,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 // Define plugin constants
-define( 'RIDEON_TRANSLATOR_VERSION', '1.0.0' );
+define( 'RIDEON_TRANSLATOR_VERSION', '1.0.1' );
 define( 'RIDEON_TRANSLATOR_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'RIDEON_TRANSLATOR_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
 define( 'RIDEON_TRANSLATOR_PLUGIN_FILE', __FILE__ );

@@ -1,35 +1,44 @@
 # RideOn WP Translator
 
-Plugin WordPress per la traduzione automatica di post utilizzando l'API OpenAI.
+> Automatic WordPress post translation powered by OpenAI — one click, three languages.
 
-## Descrizione
+![Version](https://img.shields.io/badge/version-1.0.1-blue)
+![WordPress](https://img.shields.io/badge/WordPress-5.0%2B-21759B?logo=wordpress&logoColor=white)
+![PHP](https://img.shields.io/badge/PHP-7.4%2B-777BB4?logo=php&logoColor=white)
+![OpenAI](https://img.shields.io/badge/powered%20by-OpenAI-412991?logo=openai&logoColor=white)
+![License](https://img.shields.io/badge/license-GPL%20v2-green)
 
-Plugin che integra OpenAI GPT per tradurre automaticamente i contenuti WordPress. Traduce titolo, contenuto ed excerpt mantenendo categorie, tag e immagine in evidenza.
+---
 
-## Caratteristiche
+## Features
 
-- Traduzione automatica con un click
-- Supporto per 11 lingue (IT, EN, ES, FR, DE, PT, RU, ZH, JA, KO, AR)
-- Modelli GPT-3.5 Turbo e GPT-4 Turbo
-- Traduzione in-place nel post corrente
-- Debug logging opzionale
+- **One-click translation** from the post editor metabox
+- **In-place translation** — content is updated directly in the current post
+- **3 languages supported**: Italian, English, Spanish
+- **OpenAI models**: GPT-3.5 Turbo and GPT-4 Turbo
+- **Preserves structure**: categories, tags, featured image, and author are kept
+- **Optional debug logging** for API troubleshooting
 
-## Installazione
-
-1. Carica la cartella `rideon-wp-translator` in `/wp-content/plugins/`
-2. Attiva il plugin dal menu Plugin
-3. Configura la chiave API OpenAI in Impostazioni → RideOn Translator
-
-## Requisiti
+## Requirements
 
 - WordPress 5.0+
 - PHP 7.4+
-- Chiave API OpenAI valida
+- A valid OpenAI API key with billing configured
 
-## Documentazione
+## Installation
 
-Vedi la [documentazione completa](docs/README.md) per dettagli su configurazione, utilizzo e sviluppo.
+1. Upload the `rideon-wp-translator` folder to `/wp-content/plugins/`
+2. Activate the plugin from the **Plugins** menu in WordPress
+3. Go to **Settings → RideOn Translator** and enter your OpenAI API key
 
-## Licenza
+## Usage
 
-GPL v2 or later
+Open any post in the editor, find the **RideOn Translator** metabox in the sidebar, select a target language, and click **Translate**.
+
+## Documentation
+
+See the [full documentation](docs/README.md) for configuration details, architecture overview, and developer notes.
+
+## License
+
+GPL v2 or later — [Ride On Agency](https://rideonagency.com)
